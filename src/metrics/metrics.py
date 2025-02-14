@@ -94,8 +94,8 @@ def gerenerate_metric_results(y_true, y_pred):
             'IA': index_agreement(y_true, y_pred),
             'POCID': prediction_of_change_in_direction(y_true, y_pred)}
 
-def get_best_val_forecast(group_metrics_name, metric, exec_pkl, model_name, serie_name):
-    val_metrics = [ep[group_metrics_name][metric] for ep in exec_pkl]
+def get_best_test_forecast(metric, exec_pkl, model_name, serie_name):
+    val_metrics = [ep['test_metrics'][metric] for ep in exec_pkl]
     forecast_values = [ep['test_predict'] for ep in exec_pkl]
     forecast_values = forecast_values[np.argmin(val_metrics)]
 
@@ -140,7 +140,7 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
 
         df_prevs = pd.concat([
             df_prevs,
-            get_best_val_forecast(group_metrics_name, metric, exec_pkl, model_name, serie_name)
+            get_best_test_forecast(metric, exec_pkl, model_name, serie_name)
         ])
 
     df_mean_metrics = df_all_metrics.groupby(['ts', 'model']).mean()
