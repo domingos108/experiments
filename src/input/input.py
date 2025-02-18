@@ -1,7 +1,23 @@
 import pandas as pd
+import numpy as np
 from sklearn import preprocessing
-
+from sktime.param_est.stationarity import StationarityKPSS
 import config
+
+def difference(ts, m = 1):
+  diff = []
+
+  for t in range(m,ts.shape[0]):
+    value = ts[t] - ts[t-m]
+    diff.append(value)
+
+  return np.array(diff)
+
+def inverse_diference(last_ob, value):
+  return value + last_ob
+
+def get_inverse_diference(last_ob, value):
+  return [inverse_diference(last_ob[i], value[i]) for i in range(0, len(value))]
 
 
 def load_raw_data(base_name):
@@ -28,7 +44,7 @@ def create_windowing(df, lag_size):
     return final_df.dropna()
 
 
-def open_format_train_val_test(base_name, normalize, lag_size, exec_config):
+def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss):
 
     df = load_raw_data(base_name)
     ts_univariate = df['y'].values
@@ -36,6 +52,17 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config):
     test_size = int(exec_config['test_size']* ts_univariate.shape[0])
 
     val_size = int(exec_config['val_size'] * ts_univariate.shape[0])
+    
+    if diff_kpss is True:
+        sty_est = StationarityKPSS()  
+        sty_est.fit(ts_univariate[0:-test_size]) 
+
+        is_stationary = bool( sty_est.get_fitted_params()["stationary"])
+        if is_stationary is False:
+            ts_univariate = difference(ts_univariate, m = 1)
+    else:
+        is_stationary = False
+
 
     # normalize
     if normalize:
@@ -54,4 +81,4 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config):
     df_val = df_windowed[-(test_size+val_size): -test_size]
     df_test = df_windowed[-test_size:]
 
-    return ts_univariate, df_train, df_val, df_test, min_max_scaler, test_size, val_size
+    return ts_univariate, df_train, df_val, df_test, min_max_scaler, test_size, val_size, is_stationary, df['y'].values

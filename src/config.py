@@ -15,3 +15,16 @@ MODEL_DATA_PATH = ROOT_PATH + '/data/result/'
 
 TEST_SIZE = 0.2
 VAL_SIZE = 0.2
+
+BASE_NAME_LIST = [
+                  'airlines.txt',
+                  'sunspot.txt',
+                  'coloradoRiver.txt', 
+                  'milk', 
+                  'ozon.txt',
+                  'pollution.txt', 
+                  'temperature.txt',
+                  'redwine.txt',
+                  'Unemployment.txt']
+
+LAG_SIZE_LIST = [16, 18, 16, 19, 17, 17, 12, 20]

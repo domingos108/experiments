@@ -3,3 +3,5 @@ scikit-learn
 tqdm
 ipdb
 matplotlib
+ipywidgets
+sktime

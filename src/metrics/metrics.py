@@ -106,7 +106,10 @@ def get_best_test_forecast(metric, exec_pkl, model_name, serie_name):
                         })
 
 def get_real_values(df_prevs):
-    df_info_ts = (df_prevs.groupby('ts')['id'].max() +1).reset_index()
+
+    df_info_ts = (df_prevs.groupby('ts')['id'].max() ).reset_index().copy()
+    df_info_ts['id'] = df_info_ts['id'].values  +1
+    #df_info_ts = (df_prevs.groupby('ts')['id'].max() +1).reset_index()
 
     for base_info in df_info_ts.to_dict('records'):
         df = input.load_raw_data(base_info['ts'])
@@ -127,11 +130,16 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
     df_all_metrics = pd.DataFrame()
     df_prevs = pd.DataFrame()
     for pth in glob(fold+'*'):
-        model_name = pth.split('_')[-1].split('.')[0]
+        model_name = pth.split('_')[-1].split('.pk')[0]
         serie_name = pth.split('/')[-1].split('_')[0]
         exec_pkl = generics.open_saved_result(pth)
         exec_model.append(exec_pkl)
-        all_metrics = [ep['test_metrics'] for ep in exec_pkl]
+
+        all_metrics = []
+        for ep in exec_pkl:
+            dict_temp = ep['test_metrics']
+            dict_temp['val_metric'] = ep['best_metric']
+            all_metrics.append(dict_temp)
         
         df_metric = pd.DataFrame(all_metrics)
         df_metric['model'] = model_name
