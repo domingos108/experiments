@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 from sklearn import preprocessing
 from sktime.param_est.stationarity import StationarityKPSS
+from statsmodels.tsa.stattools import pacf
+
+
 import config
 
 def difference(ts, m = 1):
@@ -43,6 +46,17 @@ def create_windowing(df, lag_size):
 
     return final_df.dropna()
 
+def get_max_lag_to_consider(ts_univariate, test_size):
+    lag_pacf = pacf(
+        ts_univariate[0:-test_size], 
+        nlags=20#np.ceil(len(ts_univariate) * 0.1)
+    )
+
+    limit = 1.96/np.sqrt(len(ts_univariate[0:-test_size]))
+    test_list = [ True if p>limit or p<-limit else False for p in lag_pacf]
+    max_lag = max([i for i, val in enumerate(test_list) if val])
+
+    return max_lag
 
 def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss):
 
@@ -74,8 +88,14 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     else:
         ts_normalized =  df.copy()
         min_max_scaler = None
+    
+    lag_actual = lag_size
 
-    df_windowed = create_windowing(ts_normalized, lag_size)
+    if lag_size == None:
+        lag_actual = get_max_lag_to_consider(ts_univariate, test_size)
+        #print(f"PACF LAG SELECT {lag_actual}")
+
+    df_windowed = create_windowing(ts_normalized, lag_actual)
     
     df_train = df_windowed[0:-(test_size+val_size)]
     df_val = df_windowed[-(test_size+val_size): -test_size]

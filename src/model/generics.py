@@ -1,6 +1,7 @@
 import pickle as pkl
 from pathlib import Path
 import os
+import time
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.base import clone
@@ -13,18 +14,30 @@ import config
 
 
 def fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test):
+    start_time_training = time.time()
     model.fit(x_train, y_train)
+    end_time_training = time.time()
+
+    start_time_test = time.time()
     test_predict = model.predict(x_test)
+    end_time_test = time.time()
     val_predict = np.array([])
     if x_val.shape[0]>0:
         val_predict = model.predict(x_val)
 
     train_predict = model.predict(x_train)
-    return train_predict, val_predict, test_predict
+
+    time_exec = {
+        'training': end_time_training - start_time_training,
+        'testing': end_time_test - start_time_test
+    }
+
+    return train_predict, val_predict, test_predict, time_exec
 
 def fit_predict_ts_schemma(model, ts_univariate, test_size, val_size):
 
     ts_train = ts_univariate[0:-(test_size+val_size)].copy()
+    
     model.fit(ts_train)
 
     prevs = model.predict_steps(ts_univariate)
@@ -33,7 +46,7 @@ def fit_predict_ts_schemma(model, ts_univariate, test_size, val_size):
     val_predict = prevs[-(test_size+val_size): -test_size]
     test_predict = prevs[-test_size:]
   
-    return train_predict, val_predict, test_predict
+    return train_predict, val_predict, test_predict, {}
 
 
 def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_kpss):
@@ -62,14 +75,16 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
         (
             train_predict, 
             val_predict, 
-            test_predict
+            test_predict,
+            time_exec
         ) = fit_predict_ts_schemma(model, ts_univariate, test_size, val_size)
     
     else:
         (
             train_predict, 
             val_predict, 
-            test_predict
+            test_predict,
+            time_exec
         ) = fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test)
 
     y_train_original = original_ts[0:-(test_size+val_size)][- len(train_predict):]
@@ -104,7 +119,8 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
         'val_predict': val_predict, 
         'test_predict':test_predict,
         'val_metrics': val_metrics,
-        'test_metrics': test_metrics
+        'test_metrics': test_metrics,
+        'time_exec': time_exec
     }
 
 def create_path_if_not_exists(path):

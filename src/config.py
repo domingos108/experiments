@@ -17,14 +17,25 @@ TEST_SIZE = 0.2
 VAL_SIZE = 0.2
 
 BASE_NAME_LIST = [
-                  'airlines.txt',
-                  'sunspot.txt',
-                  'coloradoRiver.txt', 
-                  'milk', 
-                  'ozon.txt',
-                  'pollution.txt', 
-                  'temperature.txt',
-                  'redwine.txt',
-                  'Unemployment.txt']
+    #'recifeaccday.txt',
+    #'recifeaccmonth.txt',
+    #'recifeaccweek.txt'
+#]
+#[
+    'sunspot.txt',
+    'coloradoRiver.txt', 
+    'milk.txt', 
+    'Unemployment.txt',
+    'ausbee.txt',
+    'austres.txt',
+    'heartrate.txt',
+    "ozon.txt",
+    "pollution.txt",
+    "redwine.txt",
+    'taylor.txt',
+    "gasoline.txt",
+    "temperature.txt",
+    "woolyrnq.txt"
+]
 
-LAG_SIZE_LIST = [16, 18, 16, 19, 17, 17, 12, 20]
+LAG_SIZE_LIST = []

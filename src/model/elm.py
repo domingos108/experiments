@@ -7,14 +7,14 @@ class Model(BaseEstimator, RegressorMixin):
     model = None
 
 
-    def __init__(self, input_dim,
+    def __init__(self,
                  hidden_dim=10,
                  output_dim=1,
                  solver='sigmoid'):
         '''
         Neural Network object
         '''
-        self.input_dim = input_dim
+        self.input_dim = None
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.solver = solver
@@ -56,7 +56,7 @@ class Model(BaseEstimator, RegressorMixin):
         Compute W2 that lead to minimal LS
         '''
 
-
+        self.input_dim = x.shape[1]
         self.W1 = np.matrix(np.random.rand(self.input_dim, self.hidden_dim))
         self.W2 = np.matrix(np.random.rand(self.hidden_dim, self.output_dim))
 
@@ -92,3 +92,6 @@ class Model(BaseEstimator, RegressorMixin):
         self.U, self.S, Vt = np.linalg.svd(H, full_matrices=False)
         self.V = np.matrix(Vt).T
         return np.matrix(self.U), np.matrix(self.S), np.matrix(self.V)
+
+
+

@@ -36,7 +36,8 @@ class Perturbative(BaseEstimator):
             learning_rate_init=1,
             learning_rate = 'constant',#invscaling  
             power_t = 0.9,
-            fixed_error_lags= True
+            fixed_error_lags= True,
+            model_pert = None
         ):
 
         self.model_base = model_base
@@ -46,15 +47,13 @@ class Perturbative(BaseEstimator):
         self.learning_rate = learning_rate
         self.power_t = power_t
         self.fixed_error_lags = fixed_error_lags
-
-        if len(model_params) >1 and qtd_pertubacao is not None:
-            raise Exception("model_params maior que 1 and qtd_pertubacao não nula ")
                 
         self.model_list = []
         self.min_max_scaler = []
         self.is_ts_mode = True
 
         self.total_pertubs = 0
+        self.model_pert = model_pert
 
         super().__init__()
 
@@ -67,11 +66,19 @@ class Perturbative(BaseEstimator):
         return error
     
     def fit(self, ts):
-        if len(self.model_params) >1 and self.qtd_pertubacao is not None:
-            raise Exception("model_params maior que 1 and qtd_pertubacao não nula ")
         
-        if self.qtd_pertubacao is not None:
+
+        if len(self.model_params) >2 and self.qtd_pertubacao is not None:
+            raise Exception("model_params maior que 2 and qtd_pertubacao não nula ")
+        
+        if self.qtd_pertubacao is not None and len(self.model_params) <2:
             self.model_params = self.model_params * self.qtd_pertubacao
+
+        elif self.qtd_pertubacao is not None and len(self.model_params) == 2:
+            first_model = self.model_params[0]
+            pert_models = self.model_params[1]
+
+            self.model_params = [first_model] + [pert_models] * self.qtd_pertubacao
 
         if ts.ndim > 1:
             raise Exception('y must be a univariate numpy array')
@@ -94,7 +101,12 @@ class Perturbative(BaseEstimator):
             ) = create_min_max_scale(ts_actual.copy())
             
             X, y = create_window(ts_norm, lag_size_actual)
-            model = clone(self.model_base).set_params(**params_actual)
+
+            if self.model_pert is not None and count > 0:
+                
+                model = clone(self.model_pert).set_params(**params_actual)
+            else:
+                model = clone(self.model_base).set_params(**params_actual)
             
             model = model.fit(X, y)
             
@@ -104,7 +116,7 @@ class Perturbative(BaseEstimator):
             self.min_max_scaler.append(min_max_scaler)
             count = count + 1 
         self.train_p_components = p_components
-        
+
         return self
     
     def invscaling(self, count):
@@ -136,7 +148,7 @@ class Perturbative(BaseEstimator):
             ], axis=1)
         
         ts_actual = self.calculate_error_and_new_ts(p_components)
-        
+
         return ts_actual, p_components
 
     def predict_steps(self, ts):
@@ -176,7 +188,12 @@ def exec_model(
         normalize,
         model_exec,
         model_name,
-        force=True
+        force=True,
+        qtd_perturbative = None,
+        learning_rate_init = 1,
+        fixed_error_lags = False,
+        learning_rate = 'constant',
+        model_pert = None
         ):
 
     for base_name in base_name_list:
@@ -193,14 +210,21 @@ def exec_model(
         if len(fixed) ==0:
             fixed = [pn]
 
-        model = Perturbative(model_base = model_base)
+        if qtd_perturbative is not None:
+            model = Perturbative(model_base = model_base, 
+                                 qtd_pertubacao = qtd_perturbative,
+                                 learning_rate = learning_rate ,
+                                 model_pert = model_pert)
+        else:   
+            model = Perturbative(model_base = model_base, model_pert=model_pert)
 
         parameters = {
             'model_params': [ 
                 fixed + [pmb] for pmb in params_modelo_base
             ],
             'model_base': [model_base],
-            'fixed_error_lags': [False],
+            'fixed_error_lags': [fixed_error_lags],
+            'learning_rate_init': [learning_rate_init],
         }
         print(base_name)
         generics.grid_seach(
