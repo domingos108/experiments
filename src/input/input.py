@@ -59,8 +59,12 @@ def get_max_lag_to_consider(ts_univariate, test_size):
     return max_lag
 
 def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss):
+    if  (isinstance(base_name, pd.Series)):
 
-    df = load_raw_data(base_name)
+        df =  pd.DataFrame({'y': base_name.values})
+    else:
+        df = load_raw_data(base_name)
+
     ts_univariate = df['y'].values
 
     test_size = int(exec_config['test_size']* ts_univariate.shape[0])

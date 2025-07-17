@@ -1,7 +1,9 @@
-pandas
+pandas == 2.2.1
 scikit-learn
 tqdm
 ipdb
 matplotlib
 ipywidgets
 sktime
+pmdarima
+jupyterlab

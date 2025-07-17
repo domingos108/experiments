@@ -138,15 +138,19 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
         all_metrics = []
         for ep in exec_pkl:
             dict_temp = ep['test_metrics']
-            dict_temp['val_metric'] = ep['best_metric']
-            dict_temp['time_testing'] = ep['time_exec']['testing']
-            dict_temp['time_training'] = ep['time_exec']['training']
+            test_timing = ep['time_exec']['testing'] if  ep['time_exec']['testing'] else np.inf
+            training__time = ep['time_exec']['training'] if ep['time_exec']['training'] else np.inf
+            best_metric = ep['best_metric'] if ep['best_metric'] else np.inf
+
+            dict_temp['val_metric'] = best_metric
+            dict_temp['time_testing'] = test_timing
+            dict_temp['time_training'] = training__time
             all_metrics.append(dict_temp)
         
         df_metric = pd.DataFrame(all_metrics)
         df_metric['model'] = model_name
         df_metric['ts'] = serie_name
-
+        
         df_all_metrics = pd.concat([df_all_metrics, df_metric])
 
         df_prevs = pd.concat([

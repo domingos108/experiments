@@ -32,10 +32,11 @@ BASE_NAME_LIST = [
     "ozon.txt",
     "pollution.txt",
     "redwine.txt",
-    'taylor.txt',
     "gasoline.txt",
     "temperature.txt",
-    "woolyrnq.txt"
+    "woolyrnq.txt",
+    'taylor.txt',
+
 ]
 
 LAG_SIZE_LIST = []
