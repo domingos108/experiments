@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.base import clone
+from sklearn.model_selection import ParameterGrid
 
 import config
 from model import generics
@@ -8,6 +9,7 @@ class GridSearch:
     def __init__(self, 
                  model_class_exp,
                  model,
+                 model_parameters,
                  experiment_id, 
                  base_name, 
                  model_name, 
@@ -19,6 +21,7 @@ class GridSearch:
         ):
         self.model_class_exp = model_class_exp
         self.model = model
+        self.model_parameters = model_parameters
         self.experiment_id = experiment_id
         self.base_name = base_name
         self.model_name = model_name
@@ -35,34 +38,54 @@ class GridSearch:
             model_name
         )
 
-    def search_params(self):
+    def _search_params(self):
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
         experiment_params['val_size'] = config.VAL_SIZE
-        target_list_mean_metrics = []
-        exec_list_metrics = []
-        for _ in range(0, self.model_exec): 
-            model_exp = self.model_class_exp( 
-                clone(self.model),
-                self.experiment_id, 
-                self.base_name, 
-                self.model_name, 
-                self.force,
-                self.normalize,
-                experiment_params
-            )
 
-            model_exp.fit_predict()
-            metrics_results = model_exp.metrics_results
-            exec_list_metrics.append(
-                metrics_results.get(self.group_metrics_name, {self.metric: np.inf})[self.metric]
-            )
-        exec_list_metrics.append(np.mean(exec_list_metrics))
+        target_list_mean_metrics = []
+
+        model_exec = 1 if self.model_exec < 1 else self.model_exec
+
+        list_params = list(ParameterGrid(self.model_parameters))
+
+        for params in list_params:
+            exec_list_metrics = []
+
+            for _ in range(0, model_exec): 
+                model_exp = self.model_class_exp( 
+                    clone(self.model).set_params(** params),
+                    self.experiment_id, 
+                    self.base_name, 
+                    self.model_name, 
+                    self.force,
+                    self.normalize,
+                    experiment_params
+                )
+
+                model_exp.fit_predict()
+                metrics_results = model_exp.metrics_results
+                exec_list_metrics.append(
+                    metrics_results.get(self.group_metrics_name, {self.metric: np.inf})[self.metric]
+                )
+
+            target_list_mean_metrics.append(np.mean(exec_list_metrics))
+
+        int_arg_min = np.argmin(target_list_mean_metrics)
+        
+        return target_list_mean_metrics[int_arg_min], list_params[int_arg_min]
+
+    def execution(self):
+        
+        best_exec_val, best_params = self._search_params()
+
+        experiment_params = self.experiment_params.copy()
+        experiment_params['test_size'] = config.TEST_SIZE
         experiment_params['val_size'] = 0
         predict_results = []
         for _ in range(0, self.model_exec): 
             model_exp_test = self.model_class_exp( 
-                clone(self.model),
+                clone(self.model).set_params(** best_params),
                 self.experiment_id, 
                 self.base_name, 
                 self.model_name, 
@@ -71,8 +94,8 @@ class GridSearch:
                 experiment_params
             )
             model_exp_test.fit_predict()
-            predict_results.append(model_exp_test)
-
+            
+            predict_results.append({'experiment': model_exp_test, 'val_metric': best_exec_val})
+        
         generics.save_result(self.fold, self.title, predict_results)
 
-        import ipdb;ipdb.set_trace()

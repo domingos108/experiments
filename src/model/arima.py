@@ -41,6 +41,9 @@ class Arima(BaseEstimator):
 
         return train_predicted, prevs_h_steps
     
+class ResultExp:
+    def __init__(self, metrics_results):
+        self.metrics_results = metrics_results
 
 def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, force=True):
 
@@ -57,6 +60,8 @@ def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, fo
         "test_size": config.TEST_SIZE,
         "val_size": 0
     }
+    base_info = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
+    
     (
         ts_univariate,
         df_train, 
@@ -66,8 +71,9 @@ def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, fo
         test_size, 
         val_size,
         is_stationary, 
-        original_ts
-    ) = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
+        original_ts,
+        _
+    ) = base_info.sequential_return()
 
     model = Arima(seazonal_lag)
     forecaster = clone(model).set_params(** {})
@@ -88,5 +94,5 @@ def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, fo
         'params': None,
         'best_metric': None
     }
-
-    generics.save_result(fold, title, [result_dict])
+    result = ResultExp(result_dict)
+    generics.save_result(fold, title, [{'experiment': result, 'val_metric': None}])

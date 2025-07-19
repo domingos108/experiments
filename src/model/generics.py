@@ -50,6 +50,7 @@ def fit_predict_ts_schemma(model, ts_univariate, test_size, val_size):
 
 
 def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_kpss):
+    base_info = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
     (
         ts_univariate,
         df_train, 
@@ -59,9 +60,9 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
         test_size, 
         val_size,
         is_stationary, 
-        original_ts
-    ) = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
-
+        original_ts,
+        _
+    )  = base_info.sequential_return()
     y_train = df_train['actual'].values
     x_train = df_train.drop(columns=['actual']).values
 

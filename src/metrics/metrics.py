@@ -95,8 +95,8 @@ def gerenerate_metric_results(y_true, y_pred):
             'POCID': prediction_of_change_in_direction(y_true, y_pred)}
 
 def get_best_test_forecast(metric, exec_pkl, model_name, serie_name):
-    val_metrics = [ep['test_metrics'][metric] for ep in exec_pkl]
-    forecast_values = [ep['test_predict'] for ep in exec_pkl]
+    val_metrics = [ep['experiment'].metrics_results['test_metrics'][metric] for ep in exec_pkl]
+    forecast_values = [ep['experiment'].metrics_results['test_predict'] for ep in exec_pkl]
     forecast_values = forecast_values[np.argmin(val_metrics)]
 
     return pd.DataFrame({'prev':forecast_values, 
@@ -124,6 +124,7 @@ def get_real_values(df_prevs):
         df_prevs = pd.concat([df_prevs, df_real])
 
     return df_prevs
+
 def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric = 'RMSE'):
     fold, _ = generics.format_names(experiment_id, '', '')
     exec_model = []
@@ -136,11 +137,13 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
         exec_model.append(exec_pkl)
 
         all_metrics = []
-        for ep in exec_pkl:
+
+        for experiment in exec_pkl:
+            ep = experiment['experiment'].metrics_results
             dict_temp = ep['test_metrics']
             test_timing = ep['time_exec']['testing'] if  ep['time_exec']['testing'] else np.inf
             training__time = ep['time_exec']['training'] if ep['time_exec']['training'] else np.inf
-            best_metric = ep['best_metric'] if ep['best_metric'] else np.inf
+            best_metric = experiment['val_metric'] if experiment['val_metric']  else np.inf
 
             dict_temp['val_metric'] = best_metric
             dict_temp['time_testing'] = test_timing

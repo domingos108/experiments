@@ -30,11 +30,31 @@ class Additive:
             self.base_name, 
             self.experiment_params['linear_model_name']
         )
-        lag_size = self.experiment_params['lag_size']
+        lag_size_base = self.experiment_params['lag_size']
         normalize = self.normalize
         diff_kpss = False
 
-        pn = generics.open_saved_result(linear_title)[0]
+        exec_config = {
+            "test_size": self.experiment_params['test_size'],
+            "val_size": self.experiment_params['val_size']
+        }
+
+        base_info = input.open_format_train_val_test(
+            self.base_name, 
+            normalize, 
+            lag_size_base, 
+            exec_config, 
+            diff_kpss
+        )
+        original_ts = base_info.original_ts  
+        test_size = base_info.test_size
+        val_size = base_info.val_size
+        lag_size = base_info.lag_size_formated
+
+        pn = generics.open_saved_result(
+            linear_title
+        )[0]['experiment'].metrics_results
+        
         ts_forecast = np.concatenate((pn['train_predict'], pn['test_predict']), axis=0)
 
         fold, title = generics.format_names(self.experiment_id, self.base_name, self.model_name)
@@ -42,23 +62,7 @@ class Additive:
         if generics.file_exists(title) and (not self.force):
             print('Modelo já executado')       
 
-        exec_config = {
-            "test_size": self.experiment_params['test_size'],
-            "val_size": self.experiment_params['val_size']
-        }
-
-        (
-            _,
-            _, 
-            _,
-            _, 
-            _,
-            test_size, 
-            val_size,
-            _, 
-            original_ts
-        ) = input.open_format_train_val_test(self.base_name, normalize, lag_size, exec_config, diff_kpss)
-
+    
         if ts_forecast.shape[0] != original_ts.shape[0]:
             raise Exception("Size of linear model forecast must be the same size of the time series")
         

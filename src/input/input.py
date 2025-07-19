@@ -105,4 +105,71 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     df_val = df_windowed[-(test_size+val_size): -test_size]
     df_test = df_windowed[-test_size:]
 
-    return ts_univariate, df_train, df_val, df_test, min_max_scaler, test_size, val_size, is_stationary, df['y'].values
+    result = OpenDataOutput(
+        ts_univariate, 
+        df_train, 
+        df_val, 
+        df_test, 
+        min_max_scaler, 
+        test_size, 
+        val_size, 
+        is_stationary, 
+        df,
+        lag_actual
+    )
+    return result
+
+
+class OpenDataOutput:
+    def __init__(self, 
+                 ts_univariate, 
+                 df_train, 
+                 df_val, 
+                 df_test, 
+                 min_max_scaler,
+                 test_size, 
+                 val_size, 
+                 is_stationary, 
+                 df,
+                 lag_size_formated
+    ):
+        self.ts_univariate = ts_univariate
+        self.df_train = df_train
+        self.df_val = df_val
+        self.df_test = df_test
+        self.min_max_scaler = min_max_scaler
+        self.test_size = test_size
+        self.val_size = val_size
+        self.is_stationary = is_stationary
+        self.df = df
+        self.original_ts = self.df['y'].values
+        self.lag_size_formated = lag_size_formated
+
+    def sequential_return(self):
+        return (
+            self.ts_univariate, 
+            self.df_train, 
+            self.df_val, 
+            self.df_test, 
+            self.min_max_scaler, 
+            self.test_size, 
+            self.val_size, 
+            self.is_stationary, 
+            self.df['y'].values,
+            self.lag_size_formated
+    )
+    def dict_return(self):
+        return {
+            'ts_univariate': self.ts_univariate,
+            'df_train': self.df_train,
+            'df_val': self.df_val,
+            'df_test': self.df_test,
+            'min_max_scaler': self.min_max_scaler,
+            'test_size': self.test_size,
+            'val_size': self.val_size,
+            'is_stationary': self.is_stationary,
+            'original_ts': self.df['y'].values,
+            'lag_size_formated': self.lag_size_formated
+        }
+        
+
