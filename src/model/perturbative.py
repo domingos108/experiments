@@ -49,10 +49,11 @@ class Perturbative:
         self.min_max_scaler = []
         self.learning_rate_init = experiment_params['learning_rate_init']
         self.power_t = 0.9
-        self.learning_rate = 'invscaling'
+        self.learning_rate = 'constant'
         self.fixed_error_lags = True
         self.qtd_perturbations = experiment_params['qtd_perturbations']
         self.earlystop = experiment_params.get('earlystop', None)
+        self.bagging_pct = experiment_params['bagging_pct']
 
     def calculate_error_and_new_ts(self, p_components):
         df_p_final = p_components.dropna().drop(columns=['actual'])
@@ -94,7 +95,18 @@ class Perturbative:
         ts_actual, absolut_error = self.calculate_error_and_new_ts(p_components)
         
         return ts_actual, p_components, absolut_error
-    
+        
+    def bagging(self, X, y):
+        num_linhas = X.shape[0]
+        size = int(num_linhas * self.bagging_pct)
+        indices_aleatorios = np.random.choice(
+            num_linhas,     
+            size=size, 
+            replace=True  
+        )
+
+        return X[indices_aleatorios], y[indices_aleatorios]
+
     def fit(self, training_ts, base_info:input.OpenDataOutput):
         lag_size_actual = base_info.lag_size_formated
 
@@ -116,7 +128,9 @@ class Perturbative:
             ) = create_min_max_scale(ts_actual.copy())
             
             X, y = create_window(ts_norm, lag_size_actual)
-   
+            if self.bagging_pct is not None:
+                X, y = self.bagging(X, y)
+
             model = model.fit(X, y)
             
             ts_actual, p_components, absolut_error = self.perturbation(X, model, p_components, min_max_scaler, count)
@@ -136,6 +150,7 @@ class Perturbative:
         if self.earlystop is not None:
             best_pert_arg = np.argmin(self.error_list[1:]) + 2 ## 1 para por de volta o p0 e outro para pegar o melor index+1
             self.error_list = self.error_list[0: best_pert_arg]
+
         self.train_p_components = p_components
 
     def predict_steps(self, base_info:input.OpenDataOutput):
