@@ -21,9 +21,9 @@ BASE_NAME_LIST = [
     #'recifeaccmonth.txt',
     #'recifeaccweek.txt'
 #]
-#[
-    'sunspot.txt',
+#[   
     'coloradoRiver.txt', 
+    'sunspot.txt',
     'milk.txt', 
     'Unemployment.txt',
     'ausbee.txt',
@@ -35,7 +35,7 @@ BASE_NAME_LIST = [
     "gasoline.txt",
     "temperature.txt",
     "woolyrnq.txt",
-    'taylor.txt',
+    #'taylor.txt',
 
 ]
 

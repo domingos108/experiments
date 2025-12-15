@@ -86,7 +86,7 @@ class SKlearnModel:
             test_predict,
             time_exec
         ) = fit_predict_ml_schemma(self.model, x_train, y_train, x_val, x_test)
-
+        
         y_train_original = original_ts[0:-(test_size+val_size)][- len(train_predict):]
         y_test_original = original_ts[-test_size:]
         y_val_original = original_ts[-(test_size+val_size): -test_size]

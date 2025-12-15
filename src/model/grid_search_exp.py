@@ -39,6 +39,7 @@ class GridSearch:
         )
 
     def _search_params(self):
+
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
         experiment_params['val_size'] = config.VAL_SIZE
@@ -99,3 +100,34 @@ class GridSearch:
         
         generics.save_result(self.fold, self.title, predict_results)
 
+
+
+
+def grid_seach_multiple_bases(fit_predict_class, model, normalize, model_parameters,
+                              experiment_params,
+                              model_exec, model_name, experiment_id, 
+                              force = True):
+
+    base_name_list = config.BASE_NAME_LIST
+
+    for base_name in base_name_list:
+        print(base_name)
+        fold, title = generics.format_names(experiment_id, base_name, model_name)
+
+        if generics.file_exists(title) and (not force):
+            continue
+        
+        exec_gs = GridSearch(
+            fit_predict_class,
+            model,
+            model_parameters,
+            experiment_id, 
+            base_name, 
+            model_name, 
+            force,
+            normalize,
+            experiment_params,
+            model_exec = model_exec
+        )
+
+        exec_gs.execution()

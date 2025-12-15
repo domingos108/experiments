@@ -170,85 +170,53 @@ def format_names(experiment_id, base_name, model_name):
     title = fold+base_name.split('.')[0]+'_'+model_name+".pkl"
     return fold, title
 
+def format_forecats(original_ts, 
+                    time_exec, 
+                    test_size, 
+                    val_size, 
+                    normalize,
+                    min_max_scaler,
+                    is_stationary,
+                    diff_kpss,
+                    y_val,
+                    train_predict,
+                    val_predict,
+                    test_predict
 
-def grid_seach(model, base_name, normalize, parameters,
-              model_exec, model_name, experiment_id,
-              group_metrics_name = 'val_metrics', metric = 'RMSE', force = True, diff_kpss=True):
-    
-    exec_config = {
-        "test_size": config.TEST_SIZE,
-        "val_size": config.VAL_SIZE
-    }
+    ):
 
-    fold, title = format_names(experiment_id, base_name, model_name)
+    y_train_original = original_ts[0:-(test_size+val_size)][- len(train_predict):]
+    y_test_original = original_ts[-test_size:]
+    y_val_original = original_ts[-(test_size+val_size): -test_size]
 
-    if file_exists(title) and (not force):
-        print('Modelo já executado')
-        return None
-
-    list_params=list(ParameterGrid(parameters))
-    
-    list_metrics = []
-
-    model_exec = 1 if model_exec < 1 else model_exec
-   
-    for params in tqdm(list_params):
-        params_actual = params.copy()
-        if params_actual.get('time_window', 0) == 0:
-            lag_size = 0
-        else:
-            del params_actual['time_window']
-            lag_size = params['time_window']
-
-        local_metrics = []
-        for _ in range(0, model_exec): 
-            forecaster = clone(model).set_params(** params_actual)
-            result = fit_predict_model(forecaster, base_name, normalize, lag_size, exec_config, diff_kpss)
-            result['params'] = params_actual
-            local_metrics.append(result.get(group_metrics_name, {metric: np.inf})[metric])
+    if normalize:
+        test_predict = min_max_scaler.inverse_transform(test_predict.reshape(-1, 1)).flatten()
+        train_predict = min_max_scaler.inverse_transform(train_predict.reshape(-1, 1)).flatten()
+        if y_val.shape[0] > 0:
+            val_predict = min_max_scaler.inverse_transform(val_predict.reshape(-1, 1)).flatten()
         
-        list_metrics.append(np.mean(local_metrics))
+    if (is_stationary is False) and (diff_kpss is True):
+        train_predict =  y_train_original + train_predict
+        
+        if y_val.shape[0] > 0:
+            test_predict =  np.concatenate(( [y_val_original[-1]], y_test_original[0:-1])) + test_predict
 
-    int_arg_min = np.argmin(list_metrics)
+            val_predict =  np.concatenate(( [y_train_original[-1]], y_val_original[0:-1])) + val_predict
+        else:
+            test_predict =  np.concatenate(( [y_train_original[-1]], y_test_original[0:-1])) + test_predict
 
-    predict_results = predict_test_set(model, base_name, normalize, 
-                                       model_exec,
-                                       list_params[int_arg_min], list_metrics[int_arg_min], diff_kpss)
-    
-    save_result(fold, title, predict_results)
+    test_metrics = metrics.gerenerate_metric_results(y_test_original, test_predict)
 
-
-def predict_test_set(model, base_name, normalize, model_exec, best_params, best_metric, diff_kpss):
-    exec_config = {
-        "test_size": config.TEST_SIZE,
-        "val_size": 0
-    }
-    list_exec = []
-
-    params_actual = best_params.copy()
-
-    if params_actual.get('time_window', 0) == 0:
-        lag_size = 0
+    if y_val.shape[0]==0:
+        val_metrics={}
     else:
-        del params_actual['time_window']
-        lag_size = best_params['time_window']
+        val_metrics = metrics.gerenerate_metric_results(y_val_original, val_predict)
 
-    for k in range(0, model_exec):
-        forecaster = clone(model).set_params(** params_actual)
-        result = fit_predict_model(forecaster, base_name, normalize, lag_size, exec_config, diff_kpss)
-        result['params'] = best_params
-        result['best_metric'] = best_metric
-        list_exec.append(result)
-    
-    return list_exec
-
-def grid_seach_multiple_bases(model,  base_name_list, normalize, parameters,
-                               model_exec, model_name, experiment_id, force = True, diff_kpss=True):
-
-    for base_name in base_name_list:
-        print(base_name)
-        grid_seach(model,  base_name, 
-                   normalize, 
-                   parameters, model_exec,
-                   model_name, experiment_id,
-                    group_metrics_name = 'val_metrics', metric = 'RMSE', force = force, diff_kpss = diff_kpss)
+    return  {
+        'train_predict': train_predict, 
+        'val_predict': val_predict, 
+        'test_predict':test_predict,
+        'val_metrics': val_metrics,
+        'test_metrics': test_metrics,
+        'time_exec': time_exec
+    }

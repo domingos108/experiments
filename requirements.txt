@@ -7,3 +7,4 @@ ipywidgets
 sktime
 pmdarima
 jupyterlab
+tensorflow
