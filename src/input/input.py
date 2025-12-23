@@ -105,6 +105,9 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     df_val = df_windowed[-(test_size+val_size): -test_size]
     df_test = df_windowed[-test_size:]
 
+    ts_freq = config.BASE_INFORMATION[base_name]['freq']
+    m = config.BASE_INFORMATION[base_name]['m']
+
     result = OpenDataOutput(
         ts_univariate, 
         df_train, 
@@ -115,7 +118,9 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
         val_size, 
         is_stationary, 
         df,
-        lag_actual
+        lag_actual,
+        ts_freq,
+        m
     )
     return result
 
@@ -131,7 +136,9 @@ class OpenDataOutput:
                  val_size, 
                  is_stationary, 
                  df,
-                 lag_size_formated
+                 lag_size_formated,
+                 freq = 'MS',
+                 m = 1
     ):
         self.ts_univariate = ts_univariate
         self.df_train = df_train
@@ -144,6 +151,8 @@ class OpenDataOutput:
         self.df = df
         self.original_ts = self.df['y'].values
         self.lag_size_formated = lag_size_formated
+        self.freq = freq
+        self.m = m
 
     def sequential_return(self):
         return (

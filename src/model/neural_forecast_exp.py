@@ -1,0 +1,130 @@
+import os
+import logging
+
+import pandas as pd
+import numpy as np
+from neuralforecast import NeuralForecast
+
+from input import input
+from metrics import metrics
+
+
+os.environ['PYTORCH_LIGHTNING_LOG_LEVEL'] = 'ERROR'
+logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
+
+class NeuralForecastExp:
+    def __init__(self, 
+                model,
+                experiment_id, 
+                base_name, 
+                model_name, 
+                force=True,
+                normalize = True,
+                experiment_params = {} 
+
+    ):
+        self.model = model
+        self.experiment_id = experiment_id
+        self.base_name = base_name
+        self.model_name = model_name
+        self.experiment_params = experiment_params
+        self.force = force
+        self.normalize = normalize
+
+    def fit_predict(self):
+ 
+        lag_size_base = self.experiment_params['lag_size']
+        normalize = self.normalize
+        diff_kpss = self.experiment_params.get('diff_kpss', True)
+
+        exec_config = {
+            "test_size": self.experiment_params['test_size'],
+            "val_size": self.experiment_params['val_size']
+        }
+    
+        base_info = input.open_format_train_val_test(
+            self.base_name, normalize, lag_size_base, exec_config, diff_kpss)
+        
+        params = self.experiment_params['model_actual_config']
+        params['h'] = 1
+        params['random_seed'] = np.random.randint(0, 10000)
+        params['input_size'] = base_info.lag_size_formated
+        model_base = self.model(**params)
+
+        ts_univariate = base_info.ts_univariate
+        test_size = base_info.test_size
+        val_size = base_info.val_size
+        freq = base_info.freq
+
+        df_ts = pd.DataFrame(
+            {
+                'unique_id': '1',
+                'ds': pd.date_range(start='1900-01-01', periods=ts_univariate.shape[0], freq = freq),
+                'y': ts_univariate
+            }
+        )
+
+        df_training = df_ts.iloc[0: - (test_size + val_size)]
+
+        df_prev = df_ts.iloc[- (test_size + val_size):]
+        
+        fcst = NeuralForecast(models=[model_base], freq=freq)
+        fcst.fit(df=df_training)
+
+        test_prevs = []
+        current_train = df_training[['unique_id', 'ds', 'y']].copy()
+
+        model_name = [model.__class__.__name__ for model in fcst.models]
+
+        if len(model_name) > 1:
+            raise NotImplementedError("Multiplos modelos não implementado")
+        
+        model_name = model_name[0]
+        train_predict = fcst.predict_insample(step_size=1)[model_name]
+
+        for i in range(df_prev.shape[0]):
+            # Prevemos o próximo ponto
+            # O Nixtla usa o final do DataFrame fornecido para gerar a previsão
+            forecast = fcst.predict(df=current_train)
+            test_prevs.append(forecast[model_name].iloc[params['h'] -1])
+            
+            # "Update": Adicionamos a linha real do teste ao DataFrame de treino
+            actual_row =  df_prev[['unique_id', 'ds', 'y']].iloc[[i]]
+            current_train = pd.concat([current_train, actual_row]).reset_index(drop=True)
+
+        if val_size>0:
+            val_predict = test_prevs[0:-test_size]
+        else:
+            val_predict = np.array([])
+        
+        test_predict = test_prevs[-test_size:]
+
+        y_train_original = base_info.original_ts[0:-(test_size+val_size)][- len(train_predict):]
+        y_test_original = base_info.original_ts[-test_size:]
+        y_val_original = base_info.original_ts[-(test_size+val_size): -test_size]
+
+        if (base_info.is_stationary is False) and (diff_kpss is True):
+            train_predict =  y_train_original + train_predict
+            
+            if val_size > 0:
+                test_predict =  np.concatenate(( [y_val_original[-1]], y_test_original[0:-1])) + test_predict
+
+                val_predict =  np.concatenate(( [y_train_original[-1]], y_val_original[0:-1])) + val_predict
+            else:
+                test_predict =  np.concatenate(( [y_train_original[-1]], y_test_original[0:-1])) + test_predict
+
+        test_metrics = metrics.gerenerate_metric_results(y_test_original, test_predict)
+
+        if val_size > 0:
+            val_metrics = metrics.gerenerate_metric_results(y_val_original, val_predict)
+        else:
+            val_metrics={}
+
+        self.metrics_results = {
+            'train_predict': train_predict, 
+            'val_predict': val_predict, 
+            'test_predict':test_predict,
+            'val_metrics': val_metrics,
+            'test_metrics': test_metrics,
+            'time_exec': {'testing': None, 'training': None}
+        }

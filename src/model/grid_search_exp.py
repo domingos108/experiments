@@ -1,10 +1,16 @@
+import copy
+
 import numpy as np
 from sklearn.base import clone
 from sklearn.model_selection import ParameterGrid
+from sklearn.base import BaseEstimator
 
 import config
 from model import generics
 
+def is_not_sklearn(model):
+    # returns True if it is NOT a scikit-learn class/instance
+    return not isinstance(model, BaseEstimator)
 class GridSearch:
     def __init__(self, 
                  model_class_exp,
@@ -54,8 +60,14 @@ class GridSearch:
             exec_list_metrics = []
 
             for _ in range(0, model_exec): 
+                if is_not_sklearn(self.model):
+                    experiment_params['model_actual_config'] = params
+                    model_actual = self.model
+                else:
+                    model_actual = clone(self.model).set_params(** params)
+
                 model_exp = self.model_class_exp( 
-                    clone(self.model).set_params(** params),
+                    model_actual,
                     self.experiment_id, 
                     self.base_name, 
                     self.model_name, 
@@ -85,8 +97,15 @@ class GridSearch:
         experiment_params['val_size'] = 0
         predict_results = []
         for _ in range(0, self.model_exec): 
+            
+            if is_not_sklearn(self.model):
+                experiment_params['model_actual_config'] = best_params
+                model_actual = self.model
+            else:
+                model_actual = clone(self.model).set_params(** best_params)
+
             model_exp_test = self.model_class_exp( 
-                clone(self.model).set_params(** best_params),
+                model_actual,
                 self.experiment_id, 
                 self.base_name, 
                 self.model_name, 
