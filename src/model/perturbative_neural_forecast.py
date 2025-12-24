@@ -163,6 +163,10 @@ class Perturbative:
         self.params = self.experiment_params['model_actual_config']
         self.params['h'] = 1
         self.params['random_seed'] = np.random.randint(0, 10000)
+        self.params['logger'] = False
+        self.params['enable_progress_bar']= False
+        self.params['enable_model_summary']= False
+        self.params['default_root_dir'] = None
         self.params['input_size'] = self.base_info.lag_size_formated
       
         ts_univariate = self.base_info.ts_univariate

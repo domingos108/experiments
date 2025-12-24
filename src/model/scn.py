@@ -18,6 +18,7 @@ def mean_square_error(y_true, y_pred):
 def root_mean_square_error(y_true, y_pred):
 
     return mean_square_error(y_true, y_pred)**0.5
+
 def sigmoid(x):
     # Função de ativação Sigmoid.
     # Transforma o valor de entrada para um valor entre 0 e 1.

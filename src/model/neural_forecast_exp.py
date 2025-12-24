@@ -49,6 +49,11 @@ class NeuralForecastExp:
         params['h'] = 1
         params['random_seed'] = np.random.randint(0, 10000)
         params['input_size'] = base_info.lag_size_formated
+        params['logger'] = False
+        params['enable_progress_bar']= False
+        params['enable_model_summary']= False
+        params['default_root_dir'] = None
+    
         model_base = self.model(**params)
 
         ts_univariate = base_info.ts_univariate
@@ -82,6 +87,7 @@ class NeuralForecastExp:
         model_name = model_name[0]
         train_predict = fcst.predict_insample(step_size=1)[model_name]
 
+        test_prevs = []
         for i in range(df_prev.shape[0]):
             # Prevemos o próximo ponto
             # O Nixtla usa o final do DataFrame fornecido para gerar a previsão
@@ -128,3 +134,4 @@ class NeuralForecastExp:
             'test_metrics': test_metrics,
             'time_exec': {'testing': None, 'training': None}
         }
+        
