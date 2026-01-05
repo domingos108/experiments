@@ -41,7 +41,7 @@ class GridSearch:
         self.fold, self.title = generics.format_names(
             experiment_id, 
             base_name, 
-            model_name
+            f'{experiment_params["horizon"]}{model_name}'
         )
 
     def _search_params(self):

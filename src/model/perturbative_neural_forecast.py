@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 from neuralforecast import NeuralForecast
 
-from model import generics
 from metrics import metrics
 from input import input
 
@@ -81,10 +80,12 @@ class Perturbative:
             raise NotImplementedError("Multiplos modelos não implementado")
         
         model_name = model_name[0]
-        train_predict = fcst.predict_insample(step_size=1)[model_name]
+        train_predict = fcst.predict_insample(step_size=1)[
+            model_name
+        ][self.base_info.lag_size_formated:]
+
         train_predict = min_max_scaler.inverse_transform(train_predict.values.reshape(-1, 1)).flatten()
         train_predict = train_predict.tolist()
-        
 
         current_train = df_training[['unique_id', 'ds', 'y']].copy()
         test_prevs = []
@@ -115,8 +116,6 @@ class Perturbative:
         test_size = self.base_info.test_size
         val_size = self.base_info.val_size
         
-        self.error_list = []
-
         df_pert = pd.DataFrame(
            { 'actual': df_ts['y'].values}
         )
@@ -127,11 +126,12 @@ class Perturbative:
 
             p_prev = self.create_model_forecast(df_training, df_prev)
 
-            df_pert[f'p{ip}'] = p_prev
+            p_i_size = ( df_pert.shape[0] - len(p_prev))
+
+            df_pert[f'p{ip}'] = ([None] * p_i_size) + p_prev
 
             error, absolut_error = calculate_error_and_new_ts(df_pert)
             
-
             p_components = pd.DataFrame(
                 {
                     'unique_id': '1',
@@ -183,28 +183,4 @@ class Perturbative:
 
         final_forecast, self.df_pert = self.perturb(df_ts)
 
-        test_size = self.base_info.test_size
-        val_size = self.base_info.val_size
-
-        train_predict = final_forecast[0:-(test_size+val_size)]
-        val_predict = final_forecast[-(test_size+val_size): -test_size]
-        test_predict = final_forecast[-test_size:]
-        
-        test_metrics = metrics.gerenerate_metric_results(self.base_info.original_ts[-test_size:], test_predict)
-
-        if val_size!=None and val_size>0:
-            val_metrics = metrics.gerenerate_metric_results(self.base_info.original_ts[-(test_size+val_size): -test_size], val_predict)
-        else:
-            val_metrics = None
-
-        
-        self.metrics_results = {
-            'train_predict': train_predict, 
-            'val_predict': val_predict, 
-            'test_predict':test_predict,
-            'val_metrics': val_metrics,
-            'test_metrics': test_metrics,
-            'time_exec': {'testing': None, 'training': None}
-        }
-        
-        
+        self.metrics_results = metrics.format_metrics_results(final_forecast, self.base_info)

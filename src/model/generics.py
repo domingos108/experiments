@@ -3,9 +3,6 @@ from pathlib import Path
 import os
 import time
 
-from sklearn.model_selection import ParameterGrid
-from sklearn.base import clone
-from tqdm.auto import tqdm
 import numpy as np
 
 from input import input
@@ -63,6 +60,7 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
         original_ts,
         _
     )  = base_info.sequential_return()
+
     y_train = df_train['actual'].values
     x_train = df_train.drop(columns=['actual']).values
 
@@ -70,7 +68,6 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
     x_val = df_val.drop(columns=['actual']).values
 
     x_test = df_test.drop(columns=['actual']).values 
-   
     if model.__dict__.get('is_ts_mode', False):
 
         (
@@ -87,7 +84,6 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
             test_predict,
             time_exec
         ) = fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test)
-    
     y_train_original = original_ts[0:-(test_size+val_size)][- len(train_predict):]
     y_test_original = original_ts[-test_size:]
     y_val_original = original_ts[-(test_size+val_size): -test_size]

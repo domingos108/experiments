@@ -130,6 +130,7 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
     exec_model = []
     df_all_metrics = pd.DataFrame()
     df_prevs = pd.DataFrame()
+
     for pth in glob(fold+'*'):
         model_name = pth.split('_')[-1].split('.pk')[0]
         serie_name = pth.split('/')[-1].split('_')[0]
@@ -164,3 +165,30 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
     df_mean_metrics = df_all_metrics.groupby(['ts', 'model']).mean()
     df_prevs = get_real_values(df_prevs)
     return df_mean_metrics, df_all_metrics, df_prevs
+
+
+def format_metrics_results(final_forecast, base_info:input.OpenDataOutput):
+    test_size = base_info.test_size
+    val_size = base_info.val_size
+     
+    train_predict = final_forecast[0:-(test_size+val_size)]
+    val_predict = final_forecast[-(test_size+val_size): -test_size]
+    test_predict = final_forecast[-test_size:]
+
+    test_metrics = gerenerate_metric_results(base_info.original_ts[-test_size:], test_predict)
+
+    if val_size!=None and val_size>0:
+        val_metrics = gerenerate_metric_results(base_info.original_ts[-(test_size+val_size): -test_size], val_predict)
+    else:
+        val_metrics = None
+
+    metrics_results = {
+        'train_predict': train_predict, 
+        'val_predict': val_predict, 
+        'test_predict':test_predict,
+        'val_metrics': val_metrics,
+        'test_metrics': test_metrics,
+        'time_exec': {'testing': None, 'training': None}
+    }
+        
+    return metrics_results

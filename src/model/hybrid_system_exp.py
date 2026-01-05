@@ -7,10 +7,16 @@ from input import input
 from model import generics
 from metrics import metrics
 
+
+class ResultExp:
+    def __init__(self, metrics_results):
+        self.metrics_results = metrics_results
+
 def invscaling(count, power_t, learning_rate_init):
     return learning_rate_init / np.power(count, power_t)
 
 def input_linear_info(experiment_id, base_name, experiment_params, model_name):
+
     linear_fold, linear_title = generics.format_names(
         experiment_id, 
         base_name, 
@@ -18,10 +24,10 @@ def input_linear_info(experiment_id, base_name, experiment_params, model_name):
     )
     lag_size_base = experiment_params['lag_size']
     diff_kpss = experiment_params['diff_kpss']
-
     exec_config = {
         "test_size": experiment_params['test_size'],
-        "val_size": experiment_params['val_size']
+        "val_size": experiment_params['val_size'],
+        "horizon": experiment_params['horizon']
     }
 
     base_info = input.open_format_train_val_test(
@@ -31,7 +37,7 @@ def input_linear_info(experiment_id, base_name, experiment_params, model_name):
         exec_config, 
         diff_kpss
     )
-   
+    
     pn = generics.open_saved_result(
         linear_title
     )[0]['experiment'].metrics_results
@@ -39,11 +45,15 @@ def input_linear_info(experiment_id, base_name, experiment_params, model_name):
     ts_forecast = np.concatenate((pn['train_predict'], pn['test_predict']), axis=0)
 
     fold, title = generics.format_names(experiment_id, base_name, model_name)
+    if pn.get('residual_series', None) is None:
 
-    if ts_forecast.shape[0] != base_info.original_ts.shape[0]:
-        raise Exception("Size of linear model forecast must be the same size of the time series")
+        if( ts_forecast.shape[0] != base_info.original_ts.shape[0] ):
+            raise Exception("Size of linear model forecast must be the same size of the time series")
     
-    error_series = np.subtract(base_info.original_ts, ts_forecast)
+        error_series = np.subtract(base_info.original_ts, ts_forecast)
+    else:
+        error_series = pn['residual_series']
+    
 
     return (
         error_series,
@@ -111,6 +121,7 @@ class Additive:
         val_predict = final_forecast[-(test_size+val_size): -test_size]
         test_predict = final_forecast[-test_size:]
         test_metrics = metrics.gerenerate_metric_results(original_ts[-test_size:], test_predict)
+
         if val_size!=None and val_size>0:
             val_metrics = metrics.gerenerate_metric_results(original_ts[-(test_size+val_size): -test_size], val_predict)
         else:
@@ -122,9 +133,10 @@ class Additive:
             'test_predict':test_predict,
             'val_metrics': val_metrics,
             'test_metrics': test_metrics,
-            'time_exec': residual_result['time_exec']
+            'time_exec': residual_result['time_exec'],
+            'linear_forecast': ts_forecast[lag_size:] ,
+            'nonlinear_forecast': all_residual_forecasts
         }
-
 
 class NonLinear:
     def __init__(self, 
@@ -358,3 +370,195 @@ class RecursiveAdditive:
             'time_exec': time_exec
         }
 
+class HighLowAdditive:
+    def __init__(self, 
+                 model,
+                 experiment_id, 
+                 base_name, 
+                 model_name, 
+                 force=True,
+                 normalize = True,
+                 experiment_params = {} 
+
+        ):
+        self.model = model
+        self.experiment_id = experiment_id
+        self.base_name = base_name
+        self.model_name = model_name
+        self.experiment_params = experiment_params
+        self.force = force
+        self.normalize = normalize
+
+    def fit_predict(self):
+
+        (
+            error_series,
+            ts_forecast,
+            base_info,
+            exec_config
+        ) = input_linear_info(
+            self.experiment_id, 
+            self.base_name, 
+            self.experiment_params, 
+            self.model_name, 
+        )
+
+        original_ts = base_info.original_ts
+        test_size = base_info.test_size
+        val_size = base_info.val_size
+        lag_size = base_info.lag_size_formated
+        normalize = self.normalize
+        
+        residual_result = generics.fit_predict_model(
+            self.model, 
+            pd.Series(error_series), 
+            normalize, 
+            lag_size, 
+            exec_config, 
+            False
+        )
+
+        all_residual_forecasts = np.concatenate((
+            residual_result['train_predict'], 
+            residual_result['val_predict'], 
+            residual_result['test_predict'] 
+        ), axis=0)
+        
+        final_forecast = ts_forecast[lag_size:] + all_residual_forecasts 
+
+        train_predict = final_forecast[0:-(test_size+val_size)]
+        val_predict = final_forecast[-(test_size+val_size): -test_size]
+        test_predict = final_forecast[-test_size:]
+        test_metrics = metrics.gerenerate_metric_results(original_ts[-test_size:], test_predict)
+        
+        if val_size!=None and val_size>0:
+            val_metrics = metrics.gerenerate_metric_results(original_ts[-(test_size+val_size): -test_size], val_predict)
+        else:
+            val_metrics = None
+
+        self.metrics_results = {
+            'train_predict': train_predict, 
+            'val_predict': val_predict, 
+            'test_predict':test_predict,
+            'val_metrics': val_metrics,
+            'test_metrics': test_metrics,
+            'time_exec': residual_result['time_exec']
+        }
+
+
+
+
+class ResidualCombination:
+    def __init__(self, 
+                 model,
+                 experiment_id, 
+                 base_name, 
+                 model_name, 
+                 force=True,
+                 normalize = True,
+                 experiment_params = {} 
+
+        ):
+        self.model = model
+        self.experiment_id = experiment_id
+        self.base_name = base_name
+        self.model_name = model_name
+        self.experiment_params = experiment_params
+        self.force = force
+        self.normalize = normalize
+        
+    def split_training_test(self, df_input, df_output, base_info):
+        df_input_norm = df_input.copy()
+        df_output_norm = df_output.copy()
+        min_max_scaler_y = None
+
+        if self.normalize:
+            min_max_scaler_x = preprocessing.MinMaxScaler()
+            min_max_scaler_y = preprocessing.MinMaxScaler()
+
+            min_max_scaler_x.fit(df_input.iloc[0:-base_info.test_size:])
+            min_max_scaler_y.fit(df_output.iloc[0:-base_info.test_size:])
+
+            df_input_norm = min_max_scaler_x.transform(df_input)
+            df_output_norm = min_max_scaler_y.transform(df_output)
+
+        y_train = df_output_norm[0:-(base_info.test_size+base_info.val_size)].flatten()
+        x_train = df_input_norm[0:-(base_info.test_size+base_info.val_size)]
+
+        y_val = df_output_norm[-(base_info.test_size+base_info.val_size): -base_info.test_size].flatten()
+        x_val = df_input_norm[-(base_info.test_size+base_info.val_size): -base_info.test_size]
+
+        x_test = df_input_norm[-base_info.test_size:]
+
+        return x_train, y_train, x_val, y_val, x_test, min_max_scaler_y
+    
+    def exec_comb(self):
+        lag_size_base = self.experiment_params['lag_size']
+        diff_kpss = self.experiment_params['diff_kpss']
+        exec_config = {
+            "test_size": self.experiment_params['test_size'],
+            "val_size": self.experiment_params['val_size']
+        }
+
+        nonlinear_fold, nonlinear_title = generics.format_names(
+            self.experiment_id, 
+            self.base_name, 
+            self.experiment_params['nonlinear_model']
+        )
+
+        fold, title = generics.format_names(
+            self.experiment_id, 
+            self.base_name, 
+            self.model_name
+        )
+
+        list_execs = generics.open_saved_result(
+            nonlinear_title
+        )
+
+        base_info = input.open_format_train_val_test(
+            self.base_name, 
+            False, 
+            lag_size_base, 
+            exec_config, 
+            diff_kpss
+        )
+        predict_results = []
+        for le in list_execs:
+            ts_size = le['experiment'].metrics_results['nonlinear_forecast'].shape[0]
+            df_input = pd.DataFrame({
+                    'linear_forecast': le['experiment'].metrics_results['linear_forecast'],
+                    'nonlinear_forecast': le['experiment'].metrics_results['nonlinear_forecast']
+                    })
+            df_output = pd.DataFrame({'actual': base_info.ts_univariate[-ts_size:].copy()})
+            
+            x_train, y_train, x_val, y_val, x_test, min_max_scaler_y = self.split_training_test(df_input, df_output, base_info)
+
+            (
+                train_predict, 
+                val_predict, 
+                test_predict,
+                time_exec
+            ) = generics.fit_predict_ml_schemma(self.model, x_train, y_train, x_val, x_test)
+            
+            test_size = base_info.test_size
+            val_size = base_info.val_size
+            metric_result = generics.format_forecats(base_info.original_ts, 
+                        time_exec, 
+                        test_size, 
+                        val_size, 
+                        self.normalize,
+                        min_max_scaler_y,
+                        base_info.is_stationary,
+                        self.experiment_params['diff_kpss'],
+                        y_val,
+                        train_predict,
+                        val_predict,
+                        test_predict
+            )
+
+            model_exp_test = ResultExp(metric_result)
+
+            predict_results.append({'experiment': model_exp_test, 'val_metric': np.inf})
+
+        generics.save_result(fold, title, predict_results)

@@ -59,11 +59,17 @@ def get_max_lag_to_consider(ts_univariate, test_size):
     return max_lag
 
 def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss):
+    horizon = exec_config['horizon']
+
     if  (isinstance(base_name, pd.Series)):
 
         df =  pd.DataFrame({'y': base_name.values})
+        ts_freq = None
+        m = None
     else:
         df = load_raw_data(base_name)
+        ts_freq = config.BASE_INFORMATION[base_name]['freq']
+        m = config.BASE_INFORMATION[base_name]['m']
 
     ts_univariate = df['y'].values
 
@@ -77,7 +83,7 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
 
         is_stationary = bool( sty_est.get_fitted_params()["stationary"])
         if is_stationary is False:
-            ts_univariate = difference(ts_univariate, m = 1)
+            ts_univariate = difference(ts_univariate, m = horizon)
     else:
         is_stationary = False
 
@@ -98,15 +104,16 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     if lag_size == None:
         lag_actual = get_max_lag_to_consider(ts_univariate, test_size)
         #print(f"PACF LAG SELECT {lag_actual}")
-
-    df_windowed = create_windowing(ts_normalized, lag_actual)
+    
+    df_windowed = create_windowing(ts_normalized, lag_actual+(horizon-1))
+    horizon_cols = [f'actual_{i}' for i in range(1,horizon)] + ['actual']
+    lags_cols = [f'lag_{i}' for i in reversed(range(1,lag_actual+1))]
+    df_windowed.columns = lags_cols + horizon_cols
+    df_windowed.drop(columns = [f'actual_{i}' for i in range(1,horizon)], inplace=True)
     
     df_train = df_windowed[0:-(test_size+val_size)]
     df_val = df_windowed[-(test_size+val_size): -test_size]
-    df_test = df_windowed[-test_size:]
-
-    ts_freq = config.BASE_INFORMATION[base_name]['freq']
-    m = config.BASE_INFORMATION[base_name]['m']
+    df_test = df_windowed[-test_size:]    
 
     result = OpenDataOutput(
         ts_univariate, 
@@ -122,6 +129,7 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
         ts_freq,
         m
     )
+    
     return result
 
 

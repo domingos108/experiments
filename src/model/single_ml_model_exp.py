@@ -5,6 +5,11 @@ import numpy as np
 from input import input
 from metrics import metrics
 
+def inverse_difference(last_ob, value):
+    return value + last_ob
+
+def get_inverse_difference(last_ob,value):
+     return [inverse_difference(last_ob[i], value[i]) for i in range(len(value))]
 
 def fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test):
     start_time_training = time.time()
@@ -49,12 +54,15 @@ class SKlearnModel:
 
     def fit_predict(self):
         lag_size_base = self.experiment_params['lag_size']
+        horizon = self.experiment_params.get('horizon', 1)
+
         normalize = self.normalize
         diff_kpss = self.experiment_params.get('diff_kpss', True)
 
         exec_config = {
             "test_size": self.experiment_params['test_size'],
-            "val_size": self.experiment_params['val_size']
+            "val_size": self.experiment_params['val_size'],
+            'horizon': horizon
         }
     
         base_info = input.open_format_train_val_test(
@@ -98,14 +106,13 @@ class SKlearnModel:
                 val_predict = min_max_scaler.inverse_transform(val_predict.reshape(-1, 1)).flatten()
             
         if (is_stationary is False) and (diff_kpss is True):
-            train_predict =  y_train_original + train_predict
+            train_predict = get_inverse_difference(original_ts[0:-(test_size+val_size+horizon)], train_predict)
             
             if y_val.shape[0] > 0:
-                test_predict =  np.concatenate(( [y_val_original[-1]], y_test_original[0:-1])) + test_predict
-
-                val_predict =  np.concatenate(( [y_train_original[-1]], y_val_original[0:-1])) + val_predict
-            else:
-                test_predict =  np.concatenate(( [y_train_original[-1]], y_test_original[0:-1])) + test_predict
+        
+                val_predict =  get_inverse_difference(original_ts[-(test_size+val_size+horizon): -(test_size+horizon)], val_predict)
+            
+            test_predict =  get_inverse_difference(original_ts[-(test_size+horizon):-horizon], test_predict)
 
         test_metrics = metrics.gerenerate_metric_results(y_test_original, test_predict)
 

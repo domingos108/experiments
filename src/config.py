@@ -13,8 +13,8 @@ ROOT_PATH = str(encontrar_raiz_projeto())
 RAW_DATA_PATH = ROOT_PATH + '/data/raw/'
 MODEL_DATA_PATH = ROOT_PATH + '/data/result/'
 
-TEST_SIZE = 0.2
-VAL_SIZE = 0.2
+TEST_SIZE = 0.05
+VAL_SIZE = 0.05
 
 BASE_NAME_LIST = [
     #'recifeaccday.txt',
@@ -22,21 +22,26 @@ BASE_NAME_LIST = [
     #'recifeaccweek.txt'
 #]
 #[   
-    'coloradoRiver.txt', 
-    'sunspot.txt',
-    'milk.txt', 
-    'Unemployment.txt',
-    'ausbee.txt',
-    'austres.txt',
-    'heartrate.txt',
-    "ozon.txt",
-    "pollution.txt",
-    "redwine.txt",
-    "gasoline.txt",
-    "temperature.txt",
-    "woolyrnq.txt",
+    #'coloradoRiver.txt', 
+    #'sunspot.txt',
+    #'milk.txt', 
+    ##'Unemployment.txt',
+    #'ausbee.txt',
+    #'austres.txt',
+    #'heartrate.txt',
+    #"ozon.txt",
+    #"pollution.txt",
+    #"redwine.txt",
+    #"gasoline.txt",
+    #"temperature.txt",
+    #"woolyrnq.txt",
     #'taylor.txt',
-    'melbmin.txt'
+    #'melbmin.txt',
+    'consumocoformated.txt',
+    'consumoneformated.txt',
+    'consumonoformated.txt',
+    'consumosdformated.txt',
+    'consumosulformated.txt'
 
 ]
 
@@ -58,4 +63,9 @@ BASE_INFORMATION = {
     "temperature.txt": {"freq": "MS", 'm': 1 }, 
     "woolyrnq.txt": {"freq": "QE", 'm': 4 }, 
     "melbmin.txt": {"freq": "D", 'm': 1 }, 
+    'consumocoformated.txt': {"freq": "MS", 'm': 12 },
+    'consumoneformated.txt': {"freq": "MS", 'm': 12 },
+    'consumonoformated.txt': {"freq": "MS", 'm': 12 },
+    'consumosdformated.txt': {"freq": "MS", 'm': 12 },
+    'consumosulformated.txt': {"freq": "MS", 'm': 12 }
 }
