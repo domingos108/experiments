@@ -50,7 +50,7 @@ class Perturbative:
         self.learning_rate_init = experiment_params['learning_rate_init']
         self.power_t = 0.9
         self.learning_rate = 'constant'
-        self.fixed_error_lags = True
+        self.fixed_error_lags = False
         self.qtd_perturbations = experiment_params['qtd_perturbations']
         self.earlystop = experiment_params.get('earlystop', None)
         self.bagging_pct = experiment_params.get('bagging_pct', None)
@@ -215,7 +215,8 @@ class Perturbative:
 
         exec_config = {
             "test_size": self.experiment_params['test_size'],
-            "val_size": self.experiment_params['val_size']
+            "val_size": self.experiment_params['val_size'],
+            'horizon': self.experiment_params['horizon']
         }
 
         base_info = input.open_format_train_val_test(

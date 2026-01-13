@@ -9,6 +9,9 @@ from input import input
 from metrics import metrics
 import config
 
+class ResultExp:
+    def __init__(self, metrics_results):
+        self.metrics_results = metrics_results
 
 def fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test):
     start_time_training = time.time()
@@ -30,20 +33,6 @@ def fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test):
     }
 
     return train_predict, val_predict, test_predict, time_exec
-
-def fit_predict_ts_schemma(model, ts_univariate, test_size, val_size):
-
-    ts_train = ts_univariate[0:-(test_size+val_size)].copy()
-    
-    model.fit(ts_train)
-
-    prevs = model.predict_steps(ts_univariate)
-   
-    train_predict = prevs[0:-(test_size+val_size)]
-    val_predict = prevs[-(test_size+val_size): -test_size]
-    test_predict = prevs[-test_size:]
-  
-    return train_predict, val_predict, test_predict, {}
 
 
 def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_kpss):
@@ -68,22 +57,13 @@ def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_k
     x_val = df_val.drop(columns=['actual']).values
 
     x_test = df_test.drop(columns=['actual']).values 
-    if model.__dict__.get('is_ts_mode', False):
-
-        (
-            train_predict, 
-            val_predict, 
-            test_predict,
-            time_exec
-        ) = fit_predict_ts_schemma(model, ts_univariate, test_size, val_size)
+    (
+        train_predict, 
+        val_predict, 
+        test_predict,
+        time_exec
+    ) = fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test)
     
-    else:
-        (
-            train_predict, 
-            val_predict, 
-            test_predict,
-            time_exec
-        ) = fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test)
     y_train_original = original_ts[0:-(test_size+val_size)][- len(train_predict):]
     y_test_original = original_ts[-test_size:]
     y_val_original = original_ts[-(test_size+val_size): -test_size]
@@ -156,7 +136,6 @@ def open_saved_result(title):
 def save_result(fold, title, result):
 
     create_path_if_not_exists(fold)
-
     with open(title, 'wb') as handle:
         pkl.dump(result, handle)
 

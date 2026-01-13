@@ -62,7 +62,6 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     horizon = exec_config['horizon']
 
     if  (isinstance(base_name, pd.Series)):
-
         df =  pd.DataFrame({'y': base_name.values})
         ts_freq = None
         m = None
@@ -87,7 +86,6 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     else:
         is_stationary = False
 
-
     # normalize
     if normalize:
         min_max_scaler = preprocessing.MinMaxScaler()
@@ -101,8 +99,10 @@ def open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff
     
     lag_actual = lag_size
 
-    if lag_size == None:
+    if lag_size == 'auto':
         lag_actual = get_max_lag_to_consider(ts_univariate, test_size)
+    elif not isinstance(lag_size, int):
+        raise Exception(f"LAG TYPE {lag_size} NOT IMPLEMENTED")
         #print(f"PACF LAG SELECT {lag_actual}")
     
     df_windowed = create_windowing(ts_normalized, lag_actual+(horizon-1))

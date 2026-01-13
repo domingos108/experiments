@@ -16,6 +16,10 @@ import warnings
 # This will suppress ALL FutureWarning messages
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
+# apenas para garantir execução resultados antigos
+class ResultExp:
+    def __init__(self, metrics_results):
+        self.metrics_results = metrics_results
 class Arima(BaseEstimator):
 
     def __init__(self, seazonal_lag, horizon=1):
@@ -51,10 +55,6 @@ class Arima(BaseEstimator):
         
         return train_predicted, prevs_h_steps
     
-class ResultExp:
-    def __init__(self, metrics_results):
-        self.metrics_results = metrics_results
-
 def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, horizon, force=True):
 
     fold, title = generics.format_names(experiment_id, base_name, f'{horizon}{model_name}')
@@ -65,10 +65,10 @@ def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, ho
     
     normalize = False
     diff_kpss = False
-    lag_size = None
+    lag_size = 'auto'
     exec_config = {
         "test_size": config.TEST_SIZE,
-        "val_size": 0,
+        "val_size": config.VAL_SIZE,
         'horizon': horizon
     }
     base_info = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
@@ -88,24 +88,29 @@ def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, ho
 
     model = Arima(seazonal_lag, horizon)
     forecaster = clone(model).set_params(** {})
-    forecaster.fit(original_ts[0:-(test_size + horizon-1)])
+    forecaster.fit(original_ts[0:-(test_size+val_size + horizon-1)])
     
-    train_predict, test_predict = forecaster.predict_steps(original_ts[-(test_size + horizon-1):])
+    train_predict, test_predict = forecaster.predict_steps(original_ts[-(test_size +val_size + horizon-1):])
 
-    test_metrics = metrics.gerenerate_metric_results(original_ts[-test_size:], test_predict)
+    test_metrics = metrics.gerenerate_metric_results(original_ts[-test_size:], test_predict[-test_size:])
     time_exec = {'testing': None, 'training': None}
- 
+    
+    if val_size>0:
+        val_predict = test_predict[0:-test_size]
+    else:
+        val_predict = None
+
     result_dict = {
         'train_predict': train_predict, 
-        'val_predict': None, 
-        'test_predict':test_predict,
+        'val_predict': val_predict, 
+        'test_predict':test_predict[-test_size:],
         'val_metrics': None,
         'test_metrics': test_metrics,
         'time_exec': time_exec,
         'params': None,
         'best_metric': None
     }
-    result = ResultExp(result_dict)
+    result = generics.ResultExp(result_dict)
     generics.save_result(fold, title, [{'experiment': result, 'val_metric': None}])
 
 
@@ -139,7 +144,7 @@ def find_best_ma(ts_train):
 
     return best_k
 
-def exec_marima_training_testing(base_name, experiment_id, model_name, seazonal_lag, force=True):
+def exec_marima_training_testing(base_name, experiment_id, model_name, seazonal_lag, force=True, horizon = 1):
     fold, title = generics.format_names(experiment_id, base_name, model_name)
 
     if generics.file_exists(title) and (not force):
@@ -151,7 +156,8 @@ def exec_marima_training_testing(base_name, experiment_id, model_name, seazonal_
     lag_size = None
     exec_config = {
         "test_size": config.TEST_SIZE,
-        "val_size": 0
+        "val_size": 0,
+        'horizon': horizon
     }
     base_info = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
     
@@ -194,5 +200,5 @@ def exec_marima_training_testing(base_name, experiment_id, model_name, seazonal_
         'residual_series': residual_ts
 
     }
-    result = ResultExp(result_dict)
+    result = generics.ResultExp(result_dict)
     generics.save_result(fold, title, [{'experiment': result, 'val_metric': None}])

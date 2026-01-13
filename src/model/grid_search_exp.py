@@ -22,7 +22,8 @@ class GridSearch:
                  force=True,
                  normalize = True,
                  experiment_params = {},
-                 model_exec = 10
+                 model_exec = 10,
+                 use_val_slipt_for_prev = False
 
         ):
         self.model_class_exp = model_class_exp
@@ -37,7 +38,7 @@ class GridSearch:
         self.normalize = normalize
         self.group_metrics_name = 'val_metrics'
         self.metric = 'RMSE'
-
+        self.use_val_slipt_for_prev = use_val_slipt_for_prev
         self.fold, self.title = generics.format_names(
             experiment_id, 
             base_name, 
@@ -49,7 +50,8 @@ class GridSearch:
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
         experiment_params['val_size'] = config.VAL_SIZE
-
+        experiment_params['lag_size'] = config.BASE_INFORMATION[self.base_name]['lag_size']
+        
         target_list_mean_metrics = []
 
         model_exec = 1 if self.model_exec < 1 else self.model_exec
@@ -81,7 +83,7 @@ class GridSearch:
                 exec_list_metrics.append(
                     metrics_results.get(self.group_metrics_name, {self.metric: np.inf})[self.metric]
                 )
-
+            
             target_list_mean_metrics.append(np.mean(exec_list_metrics))
 
         int_arg_min = np.argmin(target_list_mean_metrics)
@@ -94,8 +96,15 @@ class GridSearch:
 
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
-        experiment_params['val_size'] = 0
+        experiment_params['lag_size'] = config.BASE_INFORMATION[self.base_name]['lag_size']
+
+        if self.use_val_slipt_for_prev:
+            experiment_params['val_size'] = config.VAL_SIZE
+        else:
+            experiment_params['val_size'] = 0
+
         predict_results = []
+        print(best_params)
         for _ in range(0, self.model_exec): 
             
             if is_not_sklearn(self.model):
@@ -125,14 +134,16 @@ class GridSearch:
 def grid_seach_multiple_bases(fit_predict_class, model, normalize, model_parameters,
                               experiment_params,
                               model_exec, model_name, experiment_id, 
-                              force = True):
+                              force = True,
+                              use_val_slipt_for_prev= True
+                              ):
 
     base_name_list = config.BASE_NAME_LIST
-
+    horizon = experiment_params['horizon']
     for base_name in base_name_list:
         print(base_name)
-        fold, title = generics.format_names(experiment_id, base_name, model_name)
 
+        fold, title = generics.format_names(experiment_id, base_name, f'{horizon}{model_name}')
         if generics.file_exists(title) and (not force):
             continue
         
@@ -146,7 +157,8 @@ def grid_seach_multiple_bases(fit_predict_class, model, normalize, model_paramet
             force,
             normalize,
             experiment_params,
-            model_exec = model_exec
+            model_exec = model_exec,
+            use_val_slipt_for_prev = use_val_slipt_for_prev
         )
 
         exec_gs.execution()

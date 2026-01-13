@@ -15,25 +15,25 @@ class ResultExp:
 def invscaling(count, power_t, learning_rate_init):
     return learning_rate_init / np.power(count, power_t)
 
-def input_linear_info(experiment_id, base_name, experiment_params, model_name):
+def input_linear_info(experiment_id, base_name, experiment_params):
 
     linear_fold, linear_title = generics.format_names(
         experiment_id, 
         base_name, 
         experiment_params['linear_model_name']
     )
-    lag_size_base = experiment_params['lag_size']
     diff_kpss = experiment_params['diff_kpss']
     exec_config = {
         "test_size": experiment_params['test_size'],
         "val_size": experiment_params['val_size'],
         "horizon": experiment_params['horizon']
-    }
+    }   
+    lag_size_config = experiment_params['lag_size']
 
     base_info = input.open_format_train_val_test(
         base_name, 
         False, 
-        lag_size_base, 
+        lag_size_config, 
         exec_config, 
         diff_kpss
     )
@@ -41,10 +41,12 @@ def input_linear_info(experiment_id, base_name, experiment_params, model_name):
     pn = generics.open_saved_result(
         linear_title
     )[0]['experiment'].metrics_results
-    
-    ts_forecast = np.concatenate((pn['train_predict'], pn['test_predict']), axis=0)
 
-    fold, title = generics.format_names(experiment_id, base_name, model_name)
+    if pn['val_predict'] is not None:
+        ts_forecast = np.concatenate((pn['train_predict'],  pn['val_predict'], pn['test_predict']), axis=0)
+    else:
+        ts_forecast = np.concatenate((pn['train_predict'], pn['test_predict']), axis=0)
+    
     if pn.get('residual_series', None) is None:
 
         if( ts_forecast.shape[0] != base_info.original_ts.shape[0] ):
@@ -54,10 +56,9 @@ def input_linear_info(experiment_id, base_name, experiment_params, model_name):
     else:
         error_series = pn['residual_series']
     
-
     return (
-        error_series,
-        ts_forecast,
+        error_series[base_info.lag_size_formated:],
+        ts_forecast[base_info.lag_size_formated:],
         base_info,
         exec_config
     )
@@ -92,7 +93,6 @@ class Additive:
             self.experiment_id, 
             self.base_name, 
             self.experiment_params, 
-            self.model_name, 
         )
         original_ts = base_info.original_ts
         test_size = base_info.test_size
@@ -170,6 +170,7 @@ class NonLinear:
         use_error = self.experiment_params["use_error"]
         use_series = self.experiment_params["use_series"]
         df_input = pd.DataFrame()
+
         if use_linear:
             columns_name = [f'linear_{i}' for i in reversed(range(1, lag_size+1))] + ['actual_linear']
             forecast_wind.columns = columns_name
@@ -221,7 +222,6 @@ class NonLinear:
             self.experiment_id, 
             self.base_name, 
             self.experiment_params, 
-            self.model_name, 
         )
         test_size = base_info.test_size
         val_size = base_info.val_size
@@ -339,7 +339,6 @@ class RecursiveAdditive:
             self.experiment_id, 
             self.base_name, 
             self.experiment_params, 
-            self.model_name, 
         )
         original_ts = base_info.original_ts
         test_size = base_info.test_size
@@ -400,7 +399,6 @@ class HighLowAdditive:
             self.experiment_id, 
             self.base_name, 
             self.experiment_params, 
-            self.model_name, 
         )
 
         original_ts = base_info.original_ts
@@ -423,7 +421,7 @@ class HighLowAdditive:
             residual_result['val_predict'], 
             residual_result['test_predict'] 
         ), axis=0)
-        
+
         final_forecast = ts_forecast[lag_size:] + all_residual_forecasts 
 
         train_predict = final_forecast[0:-(test_size+val_size)]
@@ -497,7 +495,8 @@ class ResidualCombination:
         diff_kpss = self.experiment_params['diff_kpss']
         exec_config = {
             "test_size": self.experiment_params['test_size'],
-            "val_size": self.experiment_params['val_size']
+            "val_size": self.experiment_params['val_size'],
+            'horizon': self.experiment_params['horizon']
         }
 
         nonlinear_fold, nonlinear_title = generics.format_names(
@@ -530,10 +529,11 @@ class ResidualCombination:
                     'linear_forecast': le['experiment'].metrics_results['linear_forecast'],
                     'nonlinear_forecast': le['experiment'].metrics_results['nonlinear_forecast']
                     })
-            df_output = pd.DataFrame({'actual': base_info.ts_univariate[-ts_size:].copy()})
             
-            x_train, y_train, x_val, y_val, x_test, min_max_scaler_y = self.split_training_test(df_input, df_output, base_info)
+            df_input['ens']= df_input['linear_forecast'] + df_input['nonlinear_forecast']
+            df_output = pd.DataFrame({'actual': base_info.ts_univariate[-ts_size:].copy()})
 
+            x_train, y_train, x_val, y_val, x_test, min_max_scaler_y = self.split_training_test(df_input, df_output, base_info)
             (
                 train_predict, 
                 val_predict, 
