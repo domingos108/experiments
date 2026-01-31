@@ -22,21 +22,19 @@ def input_linear_info(experiment_id, base_name, experiment_params):
         base_name, 
         experiment_params['linear_model_name']
     )
-    diff_kpss = experiment_params['diff_kpss']
+
     exec_config = {
         "test_size": experiment_params['test_size'],
         "val_size": experiment_params['val_size'],
-        "horizon": experiment_params['horizon']
-    }   
-    lag_size_config = experiment_params['lag_size']
+        "horizon": experiment_params['horizon'],
+         'lag_size': experiment_params['lag_size'],
+         'diff_kpss': experiment_params['diff_kpss'],
+         'normalize': False,
+         'type_filter': None
 
-    base_info = input.open_format_train_val_test(
-        base_name, 
-        False, 
-        lag_size_config, 
-        exec_config, 
-        diff_kpss
-    )
+    }   
+ 
+    base_info = input.open_format_train_val_test( base_name, exec_config)
     
     pn = generics.open_saved_result(
         linear_title

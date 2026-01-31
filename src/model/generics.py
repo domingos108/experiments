@@ -36,7 +36,14 @@ def fit_predict_ml_schemma(model,x_train, y_train, x_val, x_test):
 
 
 def fit_predict_model(model, base_name, normalize, lag_size, exec_config, diff_kpss):
-    base_info = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
+
+
+    exec_config['lag_size'] = lag_size
+    exec_config['diff_kpss'] = diff_kpss
+    exec_config['normalize'] = normalize
+    exec_config['type_filter'] = None
+    
+    base_info = input.open_format_train_val_test(base_name, exec_config)
     (
         ts_univariate,
         df_train, 

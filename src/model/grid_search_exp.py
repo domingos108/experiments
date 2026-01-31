@@ -1,5 +1,4 @@
-import copy
-
+import warnings
 import numpy as np
 from sklearn.base import clone
 from sklearn.model_selection import ParameterGrid
@@ -7,6 +6,11 @@ from sklearn.base import BaseEstimator
 
 import config
 from model import generics
+
+from sklearn.exceptions import ConvergenceWarning
+
+# Filter out this specific warning
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 def is_not_sklearn(model):
     # returns True if it is NOT a scikit-learn class/instance

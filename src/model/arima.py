@@ -69,9 +69,13 @@ def exec_training_testing(base_name, experiment_id, model_name, seazonal_lag, ho
     exec_config = {
         "test_size": config.TEST_SIZE,
         "val_size": config.VAL_SIZE,
-        'horizon': horizon
+        'horizon': horizon,
+        'lag_size': lag_size,
+        'diff_kpss': diff_kpss,
+        'normalize': normalize,
+        'type_filter': None
     }
-    base_info = input.open_format_train_val_test(base_name, normalize, lag_size, exec_config, diff_kpss)
+    base_info = input.open_format_train_val_test(base_name, exec_config)
     
     (
         ts_univariate,
@@ -199,6 +203,66 @@ def exec_marima_training_testing(base_name, experiment_id, model_name, seazonal_
         'best_metric': None,
         'residual_series': residual_ts
 
+    }
+    result = generics.ResultExp(result_dict)
+    generics.save_result(fold, title, [{'experiment': result, 'val_metric': None}])
+
+
+
+def exec_ma_training_testing(base_name, experiment_id, model_name, seazonal_lag, horizon, force=True, lag_size='auto'):
+
+    fold, title = generics.format_names(experiment_id, base_name, f'{horizon}{model_name}')
+
+    if generics.file_exists(title) and (not force):
+        print('Modelo já executado')
+        return None
+    
+    normalize = False
+    diff_kpss = False
+    exec_config = {
+        "test_size": config.TEST_SIZE,
+        "val_size": config.VAL_SIZE,
+        'horizon': horizon,
+        'lag_size': lag_size,
+        'diff_kpss': diff_kpss,
+        'normalize': normalize,
+        'type_filter': None
+    }
+    base_info = input.open_format_train_val_test(base_name, exec_config)
+    
+    (
+        ts_univariate,
+        df_train, 
+        df_val,
+        df_test, 
+        min_max_scaler,
+        test_size, 
+        val_size,
+        is_stationary, 
+        original_ts,
+        _
+    ) = base_info.sequential_return()
+
+    train_predict= df_train.drop(columns = ['actual']).mean(axis=1)
+    test_predict = df_test.drop(columns = ['actual']).mean(axis=1)
+
+    test_metrics = metrics.gerenerate_metric_results(original_ts[-test_size:], test_predict[-test_size:])
+    time_exec = {'testing': None, 'training': None}
+    
+    if val_size>0:
+        val_predict = df_val.drop(columns = ['actual']).mean(axis=1)
+    else:
+        val_predict = None
+
+    result_dict = {
+        'train_predict': train_predict, 
+        'val_predict': val_predict, 
+        'test_predict':test_predict[-test_size:],
+        'val_metrics': None,
+        'test_metrics': test_metrics,
+        'time_exec': time_exec,
+        'params': None,
+        'best_metric': None
     }
     result = generics.ResultExp(result_dict)
     generics.save_result(fold, title, [{'experiment': result, 'val_metric': None}])

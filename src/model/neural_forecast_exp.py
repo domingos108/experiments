@@ -40,11 +40,16 @@ class NeuralForecastExp:
         exec_config = {
             "test_size": self.experiment_params['test_size'],
             "val_size": self.experiment_params['val_size'],
-            "horizon": self.experiment_params['horizon']
+            "horizon": self.experiment_params['horizon'],
+            'normalize': normalize,
+            'diff_kpss': diff_kpss,
+            'lag_size': lag_size_base,
+            'type_filter': None
         }
     
         base_info = input.open_format_train_val_test(
-            self.base_name, normalize, lag_size_base, exec_config, diff_kpss)
+            self.base_name, exec_config
+        )
         
         params = self.experiment_params['model_actual_config']
         params['h'] = 1

@@ -154,11 +154,16 @@ class Perturbative:
 
         exec_config = {
             "test_size": self.experiment_params['test_size'],
-            "val_size": self.experiment_params['val_size']
+            "val_size": self.experiment_params['val_size'],
+            'diff_kpss': diff_kpss,
+            'lag_size': lag_size_base,
+            'normalize': normalize,
+            'horizon': 1,
+            'type_filter': None
         }
     
         self.base_info = input.open_format_train_val_test(
-            self.base_name, normalize, lag_size_base, exec_config, diff_kpss)
+            self.base_name, exec_config)
         
         self.params = self.experiment_params['model_actual_config']
         self.params['h'] = 1

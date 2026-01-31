@@ -55,18 +55,21 @@ class SKlearnModel:
     def fit_predict(self):
         lag_size_base = self.experiment_params['lag_size']
         horizon = self.experiment_params.get('horizon', 1)
-
+        type_filter = self.experiment_params.get('type_filter', None)
         normalize = self.normalize
         diff_kpss = self.experiment_params.get('diff_kpss', True)
 
         exec_config = {
             "test_size": self.experiment_params['test_size'],
             "val_size": self.experiment_params['val_size'],
-            'horizon': horizon
+            'horizon': horizon,
+            'lag_size': lag_size_base,
+            'diff_kpss': diff_kpss,
+            'normalize': normalize,
+            'type_filter': type_filter
         }
     
-        base_info = input.open_format_train_val_test(
-            self.base_name, normalize, lag_size_base, exec_config, diff_kpss)
+        base_info = input.open_format_train_val_test(self.base_name, exec_config)
         (
             ts_univariate,
             df_train, 

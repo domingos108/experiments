@@ -17,14 +17,19 @@ TEST_SIZE = 0.1
 VAL_SIZE = 0.1
 
 BASE_NAME_LIST = [
-    'recifeaccday.txt',
+    #'masamu.txt',
+    #'marecacc.txt',
+
+    #'consumocoformated.txt',
     'windspeedrecife.txt',
     'windspeednatal.txt',
     'windspeedfortaleza.txt',
+
     'irradiancesalvador.txt',
     'irradiancefortaleza.txt',
     'irradiancefloripa.txt',
     'irradiancesp.txt',
+
     'coloradoRiver.txt', 
     'sunspot.txt',
     'milk.txt', 
@@ -38,9 +43,9 @@ BASE_NAME_LIST = [
     "gasoline.txt",
     "temperature.txt",
     "woolyrnq.txt",
-    #'taylor.txt',
     'melbmin.txt',
-    #'consumocoformated.txt',
+
+   
     #'consumoneformated.txt',
     #'consumonoformated.txt',
     #'consumosdformated.txt',
@@ -52,7 +57,9 @@ LAG_SIZE_LIST = []
 
 
 BASE_INFORMATION = {
-    'recifeaccday.txt': {"freq": "D", 'm': 7 , 'lag_size': 7}, 
+    'marecacc.txt': {"freq": "D", 'm': 7 , 'lag_size': 7}, 
+ 
+    'masamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
 
     'windspeedrecife.txt': {"freq": "MS", 'm': 12, 'lag_size': 12 }, 
     'windspeednatal.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  }, 

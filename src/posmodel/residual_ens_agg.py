@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import copy
 
 from model import generics, hybrid_system_exp
 from input import input
@@ -14,12 +15,12 @@ def predict_estimators(ts_formated, base_models, min_max_scaler):
     is_bagg = True
 
     try:
-        cols_to_use = base_models.estimators_features_
+        cols_to_use = base_models.bagging_base.estimators_features_
     except AttributeError:
         is_bagg = False
-        cols_to_use= [None] * len(base_models.estimators_)
+        cols_to_use= [None] * len(base_models.bagging_base.estimators_)
    
-    for model, feat in zip(base_models.estimators_, cols_to_use):
+    for model, feat in zip(base_models.bagging_base.estimators_, cols_to_use):
         if is_bagg:
             cols_actual = [x_values.columns[f] for f in feat]
             input_actual = x_values[cols_actual]
@@ -52,11 +53,11 @@ def get_conssesuos(line):
 def dynamic_selection(prevs_df, linear_prev, experiment_params, base_info):
 
     df_linear_nonlinear = prevs_df.add(linear_prev, axis=0)
-    
     if  experiment_params['ds_args']['rc'] <=1:
         experiment_params['ds_args']['rc']  = int(
             experiment_params['ds_args']['rc'] * base_info.val_size
         )
+    
     all_prevs = model_comb.dinanic_selection(
         df_linear_nonlinear, 
         base_info.original_ts,  
@@ -100,8 +101,25 @@ def most_recent_dinanic_selection(prevs_df, linear_prev, experiment_params, base
 
     return all_prevs
 
+def disagreement_resudual(prevs_df, base_info, experiment_params):
+    k = experiment_params['ds_args']['k']
+    df_val = prevs_df.iloc[-(base_info.test_size + base_info.val_size):-base_info.test_size]
+    colnames = df_val.columns
+    similar = {}
+    for col in colnames:
+        mult_actual = df_val.mul(df_val[col], axis=0)
+        #conta quantidade de acordos resultado positivo tem concordancia, a soma =0 não concorda com 
+        # ninguém 1 100% de concordancia
+        sim = (mult_actual >0).sum() / df_val.shape[0]
+        # quanto maior a soma, mais igual o modelo é (baseado a mudança)
+        sim = sim.sum()
+        similar[col] = sim
 
+    col_similares = pd.Series(similar).sort_values()
+    col_similares = col_similares.index.tolist()[0:k]
 
+    return prevs_df[col_similares].mean(axis=1)
+    
 def exec_ensemble(experiment_params, experiment_id, base_name, model_name):
     select_type = experiment_params['select_type']
     _, title_base = generics.format_names(
@@ -122,9 +140,15 @@ def exec_ensemble(experiment_params, experiment_id, base_name, model_name):
     )
 
     lag_size = base_info.lag_size_formated
+    diff_kpss = experiment_params['diff_kpss']
     normalize = True
     experiment_params['ds_args']['lag_size'] = lag_size
-    base_info_error = input.open_format_train_val_test(pd.Series(error_series), normalize, lag_size, exec_config, False)
+    exec_config['normalize'] = normalize
+    exec_config['lag_size'] = lag_size
+    exec_config['diff_kpss'] = diff_kpss
+    exec_config['type_filter'] = None
+
+    base_info_error = input.open_format_train_val_test(pd.Series(error_series), exec_config)
 
     df_train = base_info_error.df_train
     df_val = base_info_error.df_val
@@ -140,7 +164,10 @@ def exec_ensemble(experiment_params, experiment_id, base_name, model_name):
     for model_exp in exec_pkl:
         rc = 0
         k = 0
-        prevs_df = predict_estimators(pd.concat([df_train, df_val, df_test]), model_exp['experiment'].model, min_max_scaler)
+        experiments_params_actual = copy.deepcopy(experiment_params)
+        prevs_df = predict_estimators(pd.concat([df_train, df_val, df_test]),
+                                       model_exp['experiment'].model, 
+                                       min_max_scaler)
         error_return = True
         if select_type == 'median':
             error_prev = prevs_df.median(axis=1).values
@@ -150,20 +177,45 @@ def exec_ensemble(experiment_params, experiment_id, base_name, model_name):
 
         elif select_type == 'ds':
             error_return=False
-            prev_final = dynamic_selection(prevs_df, ts_forecast[(df_test.shape[1] -1):], experiment_params, base_info)
+            prev_final = dynamic_selection(
+                prevs_df, 
+                ts_forecast[(df_test.shape[1] -1):], 
+                  experiments_params_actual, 
+                  base_info
+            )
             rc = experiment_params['ds_args']['rc']
             k = experiment_params['ds_args']['k']
 
         elif select_type == 'dsseazonal':
             error_return=False
-            prev_final = seazonal_dynamic_selection(prevs_df, ts_forecast[(df_test.shape[1] -1):], experiment_params, base_info)
+            prev_final = seazonal_dynamic_selection(
+                prevs_df, ts_forecast[(df_test.shape[1] -1):], 
+                experiments_params_actual, 
+                base_info
+            )
+
             rc = experiment_params['ds_args']['rc']
             k = experiment_params['ds_args']['k']
             
         elif select_type == 'mostrecent':
             error_return=False
-            prev_final = most_recent_dinanic_selection(prevs_df, ts_forecast[(df_test.shape[1] -1):], experiment_params, base_info)
+            prev_final = most_recent_dinanic_selection(
+                prevs_df, 
+                ts_forecast[(df_test.shape[1] -1):], 
+                experiments_params_actual, 
+                base_info
+            )
+
             rc = experiment_params['ds_args']['rc']
+            k = experiment_params['ds_args']['k']
+
+        elif select_type == 'distres':
+
+            error_prev = disagreement_resudual(
+                prevs_df,
+                base_info, 
+                experiments_params_actual
+            )
             k = experiment_params['ds_args']['k']
 
         elif select_type == 'oracle':
