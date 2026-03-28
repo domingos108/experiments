@@ -17,10 +17,10 @@ TEST_SIZE = 0.1
 VAL_SIZE = 0.1
 
 BASE_NAME_LIST = [
-    'majaboataosamu.txt',
-    'maolindasamu.txt',
-    'mapaulistasamu.txt',
-    'marecifesamu.txt',
+    #'majaboataosamu.txt',
+    #'maolindasamu.txt',
+    #'mapaulistasamu.txt',
+    #'marecifesamu.txt',
     #'marecacc.txt',
 
     #'consumocoformated.txt',
@@ -54,12 +54,20 @@ BASE_NAME_LIST = [
     #'consumosdformated.txt',
     #'consumosulformated.txt'
 
+    'irradiancecabrobo.txt',
+    'irradianceouricuri.txt',
+    'irradiancesalgueiro.txt'
+
 ]
 
 LAG_SIZE_LIST = []
 
 
 BASE_INFORMATION = {
+    'irradiancecabrobo.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradianceouricuri.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradiancesalgueiro.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+
     'marecacc.txt': {"freq": "D", 'm': 7 , 'lag_size': 7}, 
  
     'majaboataosamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},

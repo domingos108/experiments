@@ -123,7 +123,7 @@ class SKlearnModel:
             val_metrics={}
         else:
             val_metrics = metrics.gerenerate_metric_results(y_val_original, val_predict)
-
+        
         self.metrics_results = {
             'train_predict': train_predict, 
             'val_predict': val_predict, 

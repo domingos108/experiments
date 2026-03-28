@@ -1,6 +1,8 @@
 import os
 import logging
+import warnings
 
+import torch
 import pandas as pd
 import numpy as np
 from neuralforecast import NeuralForecast
@@ -11,6 +13,12 @@ from metrics import metrics
 
 os.environ['PYTORCH_LIGHTNING_LOG_LEVEL'] = 'ERROR'
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", message="`isinstance\(treespec, LeafSpec\)` is deprecated")
+
+
+# Força o PyTorch a usar todos os núcleos lógicos
+num_cores = os.cpu_count()
+torch.set_num_threads(num_cores)
 
 class NeuralForecastExp:
     def __init__(self, 
@@ -92,7 +100,6 @@ class NeuralForecastExp:
         
         model_name = model_name[0]
         train_predict = fcst.predict_insample(step_size=1)[model_name]
-
         test_prevs = []
         for i in range(df_prev.shape[0]):
             # Prevemos o próximo ponto

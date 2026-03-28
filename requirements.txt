@@ -8,4 +8,4 @@ sktime
 pmdarima
 jupyterlab
 tensorflow
-neuralforecast
+neuralforecast==3.1.2
