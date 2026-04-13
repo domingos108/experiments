@@ -9,3 +9,5 @@ pmdarima
 jupyterlab
 tensorflow
 neuralforecast
+papermill
+seaborn

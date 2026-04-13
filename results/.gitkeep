@@ -1,0 +1,3 @@
+# Este diretório armazena os CSVs compilados pelo script export_metrics_to_csv.py.
+# Os arquivos .csv aqui gerados são rastreados pelo git.
+# Para excluí-los individualmente, adicione padrões em .gitignore.

@@ -17,43 +17,24 @@ TEST_SIZE = 0.1
 VAL_SIZE = 0.1
 
 BASE_NAME_LIST = [
-    'majaboataosamu.txt',
-    'maolindasamu.txt',
-    'mapaulistasamu.txt',
-    'marecifesamu.txt',
-    #'marecacc.txt',
-
-    #'consumocoformated.txt',
-    #'windspeedrecife.txt',
-    #'windspeednatal.txt',
-    #'windspeedfortaleza.txt',
-
-    #'irradiancesalvador.txt',
-    #'irradiancefortaleza.txt',
-    #'irradiancefloripa.txt',
-    #'irradiancesp.txt',
-
-    #'coloradoRiver.txt', 
-    #'sunspot.txt',
-    #'milk.txt', 
-    #'Unemployment.txt',
-    #'ausbee.txt',
-    #'austres.txt',
-    #'heartrate.txt',
-    #"ozon.txt",
-    #"pollution.txt",
-    #"redwine.txt",
-    #"gasoline.txt",
-    #"temperature.txt",
-    #"woolyrnq.txt",
-    #'melbmin.txt',
-
-   
-    #'consumoneformated.txt',
-    #'consumonoformated.txt',
-    #'consumosdformated.txt',
-    #'consumosulformated.txt'
-
+    # --- Baseline clássica (17 séries) ---
+    'airlines.txt',
+    'ausbee.txt',
+    'austres.txt',
+    'coloradoRiver.txt',
+    'gasoline.txt',
+    'heartrate.txt',
+    'lakeerie.txt',
+    'lynx.txt',
+    'milk.txt',
+    'ozon.txt',
+    'pollution.txt',
+    'redwine.txt',
+    'sunspot.txt',
+    'taylor.txt',
+    'temperature.txt',
+    'Unemployment.txt',
+    'woolyrnq.txt',
 ]
 
 LAG_SIZE_LIST = []
@@ -75,6 +56,12 @@ BASE_INFORMATION = {
     'irradiancefortaleza.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto'  }, 
     'irradiancefloripa.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto'  }, 
     'irradiancesp.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto'  }, 
+
+    # --- Baseline clássica: entradas adicionadas ---
+    'airlines.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
+    'lakeerie.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
+    'lynx.txt':         {"freq": "YE",  'm': 1,  'lag_size': 'auto'},   # provisório
+    'taylor.txt':       {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
 
     'coloradoRiver.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto' }, 
     'sunspot.txt': {"freq": "YE", 'm': 1, 'lag_size': 'auto'  }, 
