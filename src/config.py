@@ -27,7 +27,7 @@ BASE_NAME_LIST = [
     #'windspeedrecife.txt',
     #'windspeednatal.txt',
     #'windspeedfortaleza.txt',
-
+    #'windspeedsaoluis.txt',
     #'irradiancesalvador.txt',
     #'irradiancefortaleza.txt',
     #'irradiancefloripa.txt',
@@ -54,9 +54,22 @@ BASE_NAME_LIST = [
     #'consumosdformated.txt',
     #'consumosulformated.txt'
 
-    'irradiancecabrobo.txt',
-    'irradianceouricuri.txt',
-    'irradiancesalgueiro.txt'
+    #'irradiancecabrobo.txt',
+    #'irradianceouricuri.txt',
+    #'irradiancesalgueiro.txt'
+
+    ##'irradiacaoouricuri2024.txt', 
+    #'irradiacaocabrobo2024.txt', 
+    #'irradiacaosalgueiro2024.txt', 
+    #'irradiancecastelopiaui.txt', 
+    #'irradiancepicospi.txt', 
+    #'irradiancevalencapiaui.txt' 
+
+    #'windspeedcampinagrandehour.txt',
+    'windspeedcaruaruhour.txt',
+    'windspeedcastelodopiauihour.txt', 
+    'windspeedmaceiohour.txt' ,
+    'windspeedsalvadorhour.txt',
 
 ]
 
@@ -64,9 +77,23 @@ LAG_SIZE_LIST = []
 
 
 BASE_INFORMATION = {
+    'windspeedcampinagrandehour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
+    'windspeedcaruaruhour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
+    'windspeedcastelodopiauihour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
+    'windspeedmaceiohour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
+    'windspeedsalvadorhour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
+
     'irradiancecabrobo.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
     'irradianceouricuri.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
     'irradiancesalgueiro.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+
+    'irradiacaocabrobo2024.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradiacaoouricuri2024.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradiacaosalgueiro2024.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradiancecastelopiaui.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradiancepicospi.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    'irradiancevalencapiaui.txt': {"freq": "D", 'm': 13, 'lag_size': 13}, 
+    
 
     'marecacc.txt': {"freq": "D", 'm': 7 , 'lag_size': 7}, 
  
@@ -78,6 +105,7 @@ BASE_INFORMATION = {
     'windspeedrecife.txt': {"freq": "MS", 'm': 12, 'lag_size': 12 }, 
     'windspeednatal.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  }, 
     'windspeedfortaleza.txt': {"freq": "MS", 'm': 12 , 'lag_size': 12 }, 
+    'windspeedsaoluis.txt': {"freq": "MS", 'm': 12 , 'lag_size': 12 },
 
     'irradiancesalvador.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto' }, 
     'irradiancefortaleza.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto'  }, 

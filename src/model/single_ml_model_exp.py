@@ -82,7 +82,7 @@ class SKlearnModel:
             original_ts,
             _
         )  = base_info.sequential_return()
-
+        
         y_train = df_train['actual'].values
         x_train = df_train.drop(columns=['actual']).values
 

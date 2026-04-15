@@ -35,9 +35,6 @@ class Arima(BaseEstimator):
             stepwise=True, trace=True, maxiter=30
         ) 
 
-        self.forecaster.fit(ts) 
-
-
     def predict_steps(self, ts_test):
         train_predicted = self.forecaster.predict_in_sample()
 

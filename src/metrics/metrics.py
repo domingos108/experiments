@@ -2,10 +2,11 @@ from glob import glob
 
 import numpy as np
 import pandas as pd
+from sklearn import preprocessing
 
 from model import generics
 from input import input
-
+import config
 
 def mean_square_error(y_true, y_pred):
     y_true = np.asmatrix(y_true).reshape(-1)
@@ -16,6 +17,17 @@ def mean_square_error(y_true, y_pred):
 def root_mean_square_error(y_true, y_pred):
 
     return mean_square_error(y_true, y_pred)**0.5
+
+
+def symmetric_mean_absolute_percentage_error(y_true, y_pred):
+    y_true = np.asarray(y_true).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+
+    numerator = np.abs(y_true - y_pred)   
+    denominator = (np.abs(y_true) + np.abs(y_pred)) / 2
+    smape_values = numerator / denominator
+       
+    return np.mean(smape_values) * 100
 
 def mean_absolute_percentage_error(y_true, y_pred):
     y_true = np.asarray(y_true).reshape(-1)
@@ -88,6 +100,7 @@ def gerenerate_metric_results(y_true, y_pred):
     return {'MSE': mean_square_error(y_true, y_pred),
             'RMSE':root_mean_square_error(y_true, y_pred),
             'MAPE': mean_absolute_percentage_error(y_true, y_pred),
+            'SMAPE': symmetric_mean_absolute_percentage_error(y_true, y_pred),
             'MAE': mean_absolute_error(y_true, y_pred),
             'theil': u_theil(y_true, y_pred),
             'ARV': average_relative_variance(y_true, y_pred),
@@ -125,7 +138,47 @@ def get_real_values(df_prevs):
 
     return df_prevs
 
-def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric = 'RMSE'):
+def normalize_results(experiment, serie_name):
+    
+    train_predict = experiment.metrics_results['train_predict']
+    val_predict = experiment.metrics_results['val_predict']
+    test_predict = experiment.metrics_results['test_predict']
+
+    prevs = pd.Series(train_predict).to_list()+\
+            pd.Series(val_predict).to_list() +\
+            pd.Series(test_predict).to_list()
+
+    prevs = np.array(prevs)
+
+    prevs[np.isnan(prevs)] = 0
+    prevs[np.isinf(prevs)] = 0
+
+    exec_config = {
+            "test_size": config.TEST_SIZE,
+            "val_size": config.VAL_SIZE,
+            'horizon': 1,
+            'lag_size': config.BASE_INFORMATION[serie_name+'.txt']['lag_size'],
+            'diff_kpss': False,
+            'normalize': True,
+            'type_filter': None
+    }
+    
+    base_info = input.open_format_train_val_test(serie_name+'.txt', exec_config)
+    
+    min_max_scaler = preprocessing.MinMaxScaler(feature_range=(0.1, 0.9))
+    min_max_scaler.fit(base_info.original_ts.reshape(-1, 1)  )
+    final_forecast = min_max_scaler.transform(
+         np.array(prevs).reshape(-1, 1)  
+    ).flatten()
+
+    base_info.original_ts = min_max_scaler.transform(
+         base_info.original_ts .reshape(-1, 1)  
+    ).flatten()
+
+    return format_metrics_results(final_forecast, base_info)
+    
+
+def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric = 'RMSE', normalize = False):
     fold, _ = generics.format_names(experiment_id, '', '')
     exec_model = []
     df_all_metrics = pd.DataFrame()
@@ -134,12 +187,20 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
     for pth in glob(fold+'*'):
         model_name = pth.split('_')[-1].split('.pk')[0]
         serie_name = pth.split('/')[-1].split('_')[0]
+        
         exec_pkl = generics.open_saved_result(pth)
+
+        for p in exec_pkl:
+            p['experiment'].model = None
+
         exec_model.append(exec_pkl)
 
         all_metrics = []
 
         for experiment in exec_pkl:
+            if normalize:
+                experiment['experiment'].metrics_results = normalize_results(experiment['experiment'], serie_name)
+
             ep = experiment['experiment'].metrics_results
             dict_temp = ep['test_metrics']
             test_timing = ep['time_exec']['testing'] if  ep['time_exec']['testing'] else np.inf
@@ -181,7 +242,7 @@ def format_metrics_results(final_forecast, base_info:input.OpenDataOutput):
         val_metrics = gerenerate_metric_results(base_info.original_ts[-(test_size+val_size): -test_size], val_predict)
     else:
         val_metrics = None
-
+    
     metrics_results = {
         'train_predict': train_predict, 
         'val_predict': val_predict, 

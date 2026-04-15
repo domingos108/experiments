@@ -81,6 +81,13 @@ class Model(BaseEstimator, RegressorMixin):
 
 
         self.W2 = iH * Y
+
+        del self.H
+        del self.U
+        del self.S
+        del self.V
+        self.H = self.U = self.S = self.V = None # Garante que fiquem vazios
+        
         return self
 
 
