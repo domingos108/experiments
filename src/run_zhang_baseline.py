@@ -1,20 +1,20 @@
 """
-Script para executar baseline de Khashei & Bijari (2011).
+Script para executar baseline de Zhang (2003).
 
-Roda a arquitetura híbrida não-linear em séries clássicas usadas no paper original.
+Roda a arquitetura híbrida aditiva (ARIMA + MLP nos resíduos) em séries 
+clássicas usadas no paper original.
 
 Referência
 ----------
-Khashei, M., & Bijari, M. (2011). "A novel hybridization of artificial
-neural networks and ARIMA models for time series forecasting."
-Applied Soft Computing, 11(2), 2664-2675.
+Zhang, G. P. (2003). "Time series forecasting using a hybrid ARIMA and 
+neural network model." Neurocomputing, 50, 159-175.
 """
 
 import sys
 import pandas as pd
 import os
 from sklearn.neural_network import MLPRegressor
-from model.hybrid_system_exp import KhasheiBijariHybrid
+from model.hybrid_system_exp import Additive
 import config
 
 # Importar gerador de baselines lineares
@@ -22,21 +22,24 @@ from run_arima_base import generate_linear_baselines
 
 
 # ============================================================================
-# CONFIGURAÇÕES POR SÉRIE (test_size exato conforme literatura)
+# CONFIGURAÇÕES POR SÉRIE (test_size e topologia MLP conforme literatura)
 # ============================================================================
 
 SERIES_CONFIG = {
     'sunspot.txt': {
-        'test_size': 67,    # Khashei & Bijari (2011)
-        'lag_size': 12,      # Padrão para séries anuais com ciclo de 11 anos
+        'test_size': 67,         # Zhang (2003)
+        'lag_size': 12,          # Padrão para séries anuais com ciclo de 11 anos
+        'mlp_topology': (4,)     # Topologia especificada no paper
     },
     'lynx.txt': {
-        'test_size': 14,    # Khashei & Bijari (2011)
-        'lag_size': 12,      # Padrão para séries anuais
+        'test_size': 14,         # Zhang (2003)
+        'lag_size': 12,          # Padrão para séries anuais
+        'mlp_topology': (5,)     # Topologia especificada no paper
     },
     'airlines.txt': {
-        'test_size': 12,    # Santos Jr. (2024) usou 12 para séries mensais
-        'lag_size': 12,      # Padrão para séries mensais (1 ano)
+        'test_size': 12,         # Santos Jr. (2024) usou 12 para séries mensais
+        'lag_size': 12,          # Padrão para séries mensais (1 ano)
+        'mlp_topology': (6,)     # Topologia especificada no paper
     }
 }
 
@@ -45,23 +48,17 @@ SERIES_CONFIG = {
 # PARÂMETROS GLOBAIS DO EXPERIMENTO
 # ============================================================================
 
-# ID do experimento (usado para organização dos resultados)
+# ID do experimento (reutilizar ARIMA já treinado no kb_baseline)
 EXPERIMENT_ID = 'kb_baseline'
 
 # Nome do modelo ARIMA pré-treinado (deve existir antes de rodar este script)
 LINEAR_MODEL_NAME = '1arima'
 
-# Arquitetura da rede neural (topologia parcimoniosa inicial)
-# Khashei não especificou topologia exata, usar arquitetura simples
-MLP_HIDDEN_LAYERS = (5,)
+# Parâmetros da rede neural
 MLP_MAX_ITER = 1000
 MLP_RANDOM_STATE = 42
 
-# Parâmetros Khashei & Bijari
-N1_LAGS = 3  # Lags dos resíduos ARIMA
-M1_LAGS = 3  # Lags da série original
-
-# Validação: autores não usaram conjunto de validação explícito
+# Validação: Zhang (2003) não usou conjunto de validação explícito
 VAL_SIZE = 0
 
 # Horizonte de previsão
@@ -76,19 +73,21 @@ NORMALIZE = True
 # FUNÇÃO PRINCIPAL
 # ============================================================================
 
-def run_khashei_bijari_baseline():
+def run_zhang_baseline():
     """
-    Executa baseline de Khashei & Bijari (2011) nas séries clássicas.
+    Executa baseline de Zhang (2003) nas séries clássicas.
+    
+    Modelo Aditivo: y_t = L_t + N_t
+    - L_t: Componente linear (ARIMA)
+    - N_t: Componente não-linear (MLP nos resíduos ARIMA)
     """
     series_list = ['sunspot.txt', 'lynx.txt', 'airlines.txt']
     
     print("=" * 80)
-    print("BASELINE KHASHEI & BIJARI (2011)")
+    print("BASELINE ZHANG (2003) - MODELO ADITIVO")
     print("=" * 80)
     print(f"\nExperiment ID: {EXPERIMENT_ID}")
     print(f"Linear Model: {LINEAR_MODEL_NAME}")
-    print(f"MLP Topology: {MLP_HIDDEN_LAYERS}")
-    print(f"n1_lags: {N1_LAGS} | m1_lags: {M1_LAGS}")
     print(f"val_size: {VAL_SIZE}")
     print("-" * 80)
     
@@ -122,10 +121,10 @@ def run_khashei_bijari_baseline():
     print("\n[✓] Modelos ARIMA base prontos! Iniciando treinamento de modelos híbridos...")
     
     # ========================================================================
-    # ETAPA 2: TREINAMENTO DOS MODELOS HÍBRIDOS KHASHEI-BIJARI
+    # ETAPA 2: TREINAMENTO DOS MODELOS HÍBRIDOS ADITIVOS (ZHANG)
     # ========================================================================
     print("\n" + "=" * 80)
-    print("ETAPA 2/2: TREINANDO MODELOS HÍBRIDOS KHASHEI & BIJARI")
+    print("ETAPA 2/2: TREINANDO MODELOS HÍBRIDOS ZHANG (2003)")
     print("=" * 80)
     
     results_summary = []
@@ -143,15 +142,15 @@ def run_khashei_bijari_baseline():
         serie_config = SERIES_CONFIG[base_name]
         test_size = serie_config['test_size']
         lag_size = serie_config['lag_size']
+        mlp_topology = serie_config['mlp_topology']
         
         print(f"  test_size: {test_size}")
         print(f"  lag_size: {lag_size}")
+        print(f"  MLP topology: {mlp_topology}")
         
         # Configurar parâmetros do experimento
         experiment_params = {
             'linear_model_name': LINEAR_MODEL_NAME,
-            'n1_lags': N1_LAGS,
-            'm1_lags': M1_LAGS,
             'test_size': test_size,
             'val_size': VAL_SIZE,
             'horizon': HORIZON,
@@ -159,34 +158,33 @@ def run_khashei_bijari_baseline():
             'diff_kpss': DIFF_KPSS
         }
         
-        # Instanciar modelo MLP
+        # Instanciar modelo MLP com topologia específica da série
         mlp = MLPRegressor(
-            hidden_layer_sizes=MLP_HIDDEN_LAYERS,
+            hidden_layer_sizes=mlp_topology,
             max_iter=MLP_MAX_ITER,
             random_state=MLP_RANDOM_STATE,
-            #activation='relu',
-            activation='logistic', 
+            activation='logistic',
             solver='adam'
         )
         
-        # Instanciar experimento Khashei-Bijari
-        kb_hybrid = KhasheiBijariHybrid(
+        # Instanciar experimento Aditivo (Zhang)
+        zhang_hybrid = Additive(
             model=mlp,
             experiment_id=EXPERIMENT_ID,
             base_name=base_name,
-            model_name='kb_mlp',
+            model_name='zhang_mlp',
             normalize=NORMALIZE,
             experiment_params=experiment_params
         )
         
         # Executar pipeline completo
         try:
-            kb_hybrid.fit_predict()
+            zhang_hybrid.fit_predict()
             
             # Extrair métricas de teste
-            test_rmse = kb_hybrid.metrics_results['test_metrics']['RMSE']
-            test_mae = kb_hybrid.metrics_results['test_metrics']['MAE']
-            test_mape = kb_hybrid.metrics_results['test_metrics']['MAPE']
+            test_rmse = zhang_hybrid.metrics_results['test_metrics']['RMSE']
+            test_mae = zhang_hybrid.metrics_results['test_metrics']['MAE']
+            test_mape = zhang_hybrid.metrics_results['test_metrics']['MAPE']
             
             print(f"  [OK] RMSE: {test_rmse:.4f} | MAE: {test_mae:.4f} | MAPE: {test_mape:.2f}%")
             
@@ -244,7 +242,7 @@ def run_khashei_bijari_baseline():
         df = df.set_index('serie')
         
         # Imprimir tabela formatada
-        print("\nTabela de Resultados - Khashei & Bijari (2011):")
+        print("\nTabela de Resultados - Zhang (2003):")
         print(df.to_string())
         
         # Criar diretório de comparações
@@ -252,7 +250,7 @@ def run_khashei_bijari_baseline():
         os.makedirs(comparisons_dir, exist_ok=True)
         
         # Salvar CSV
-        csv_path = os.path.join(comparisons_dir, 'resultados_khashei.csv')
+        csv_path = os.path.join(comparisons_dir, 'resultados_zhang.csv')
         df.to_csv(csv_path)
         
         print(f"\n[✓] Resultados salvos em: {csv_path}")
@@ -261,7 +259,7 @@ def run_khashei_bijari_baseline():
     
     print("=" * 80)
     
-    print("\n[CONCLUIDO] Baseline Khashei & Bijari (2011) executada com sucesso!")
+    print("\n[CONCLUIDO] Baseline Zhang (2003) executada com sucesso!")
     print("=" * 80)
 
 
@@ -271,7 +269,7 @@ def run_khashei_bijari_baseline():
 
 if __name__ == '__main__':
     try:
-        run_khashei_bijari_baseline()
+        run_zhang_baseline()
         sys.exit(0)
     except KeyboardInterrupt:
         print("\n\n[INTERROMPIDO] Execução cancelada pelo usuário.")
