@@ -48,16 +48,62 @@ def create_windowing(df, lag_size):
     return final_df.dropna()
 
 def get_max_lag_to_consider(ts_univariate, test_size):
-    lag_pacf = pacf(
-        ts_univariate[0:-test_size], 
-        nlags=20#np.ceil(len(ts_univariate) * 0.1)
-    )
-
-    limit = 1.96/np.sqrt(len(ts_univariate[0:-test_size]))
-    test_list = [ True if p>limit or p<-limit else False for p in lag_pacf]
-    max_lag = max([i for i, val in enumerate(test_list) if val])
-
-    return max_lag
+    """
+    Calcula o lag máximo a considerar baseado na PACF.
+    
+    Parâmetros
+    ----------
+    ts_univariate : array-like
+        Série temporal univariada
+    test_size : int
+        Tamanho do conjunto de teste (valor absoluto)
+    
+    Retorna
+    -------
+    int
+        Lag máximo significativo detectado pela PACF
+    """
+    # Determinar amostra de treino (excluindo test)
+    if test_size > 0:
+        train_sample = ts_univariate[0:-test_size]
+    else:
+        train_sample = ts_univariate
+    
+    n_obs = len(train_sample)
+    
+    # Proteção: nlags deve ser < 50% da amostra (requisito statsmodels)
+    safe_nlags = min(20, (n_obs // 2) - 1)
+    
+    if safe_nlags <= 0:
+        # Amostra muito pequena, retornar lag padrão
+        print(f"[AVISO] Amostra de treino muito pequena (n={n_obs}). Usando lag=1.")
+        return 1
+    
+    try:
+        # Calcular PACF
+        lag_pacf = pacf(train_sample, nlags=safe_nlags)
+        
+        # Limite de significância estatística (95%)
+        limit = 1.96 / np.sqrt(n_obs)
+        
+        # Identificar lags significativos
+        test_list = [True if p > limit or p < -limit else False for p in lag_pacf]
+        
+        # Encontrar lag máximo significativo
+        significant_lags = [i for i, val in enumerate(test_list) if val]
+        
+        if significant_lags:
+            max_lag = max(significant_lags)
+        else:
+            # Nenhum lag significativo detectado, usar padrão
+            max_lag = 1
+        
+        return max_lag
+        
+    except Exception as e:
+        # Fallback seguro em caso de erro (ex: variância zero, amostra inválida)
+        print(f"[AVISO] Erro ao calcular PACF: {str(e)}. Usando lag=1 como fallback.")
+        return 1
 
 def wavlet_db4(ts_univariate):
 
@@ -90,11 +136,33 @@ def exec_filter(ts_univariate, filter_params):
         raise Exception(f'filter {type_filter} not implemented')
 
 def open_format_train_val_test(base_name, exec_config):
+    """
+    Abre, formata e divide série temporal em conjuntos treino/validação/teste.
+    
+    IMPORTANTE: Suporta test_size e val_size como porcentagem (float ≤ 1.0)
+    ou valor absoluto (int ou float > 1). Retrocompatível com código legado.
+    
+    Parâmetros
+    ----------
+    base_name : str ou pd.Series
+        Nome do arquivo da série temporal ou série diretamente
+    exec_config : dict
+        Configuração de execução com chaves:
+        - test_size: float ≤ 1.0 (porcentagem) ou int/float > 1 (absoluto)
+        - val_size: float ≤ 1.0 (porcentagem) ou int/float > 1 (absoluto)
+        - horizon, normalize, lag_size, diff_kpss, type_filter
+    
+    Retorna
+    -------
+    OpenDataOutput
+        Objeto com dados processados e metadados
+    """
     horizon = exec_config['horizon']
     normalize = exec_config['normalize']
     lag_size = exec_config['lag_size']
     diff_kpss = exec_config['diff_kpss']
-    type_filter = exec_config['type_filter']
+    # Retrocompatibilidade: type_filter pode não existir em configs antigas
+    type_filter = exec_config.get('type_filter', None)
 
     
     if  (isinstance(base_name, pd.Series)):
@@ -107,9 +175,32 @@ def open_format_train_val_test(base_name, exec_config):
         m = config.BASE_INFORMATION[base_name]['m']
 
     ts_univariate = df['y'].values
-    test_size = int(exec_config['test_size']* ts_univariate.shape[0])
-
-    val_size = int(exec_config['val_size'] * ts_univariate.shape[0])
+    
+    # ========================================================================
+    # LÓGICA INTELIGENTE: Porcentagem vs Valor Absoluto
+    # ========================================================================
+    # Regra: float ≤ 1.0 → porcentagem (código legado)
+    #        int ou float > 1 → valor absoluto (artigos da literatura)
+    #        int == 0 → zero absoluto (sem validação)
+    
+    test_size_raw = exec_config['test_size']
+    val_size_raw = exec_config['val_size']
+    
+    # Processar test_size
+    if isinstance(test_size_raw, float) and test_size_raw <= 1.0:
+        # Modo porcentagem (código legado)
+        test_size = int(test_size_raw * ts_univariate.shape[0])
+    else:
+        # Modo absoluto (artigos da literatura)
+        test_size = int(test_size_raw)
+    
+    # Processar val_size
+    if isinstance(val_size_raw, float) and val_size_raw <= 1.0:
+        # Modo porcentagem (código legado)
+        val_size = int(val_size_raw * ts_univariate.shape[0])
+    else:
+        # Modo absoluto (artigos da literatura ou zero)
+        val_size = int(val_size_raw)
     
     lag_actual = lag_size
 
