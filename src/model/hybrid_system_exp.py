@@ -2,6 +2,8 @@ import numpy as np
 from sklearn import preprocessing
 import pandas as pd
 from sklearn.base import clone
+from sklearn.model_selection import GridSearchCV
+from statsmodels.tsa.stattools import ccf
 
 from input import input
 from model import generics
@@ -813,3 +815,414 @@ class KhasheiBijariHybrid:
             val_predict,
             test_predict
         )
+
+
+class NoLiCHybrid:
+    """
+    Arquitetura híbrida NoLiC (Nonlinear Combination) proposta por 
+    Santos Júnior et al. (2019).
+    
+    Esta arquitetura possui 3 estágios:
+    
+    1. Modelo Linear (ARIMA) -> L̂_t
+    2. Modelo Não-Linear nos resíduos (M_NL) -> Ŷ^N_t
+    3. Modelo Combinador (M_c) que combina L̂ e Ŷ^N usando CCF para
+       determinar o número ótimo de lags (L_max)
+    
+    Características:
+    - Grid Search independente para M_NL e M_c (1 a 30 neurônios)
+    - Cálculo dinâmico de L_max via Cross-Correlation Function (CCF)
+    - Matriz do combinador: [L̂_{t-L_max}, ..., L̂_t, Ŷ^N_{t-L_max}, ..., Ŷ^N_t]
+    
+    Referência
+    ----------
+    Santos Júnior, D. S., et al. (2019). "A hybrid system based on a 
+    nonlinear combination of ARIMA and neural networks for time series 
+    forecasting." Applied Soft Computing.
+    """
+    
+    def __init__(self, 
+                 model,
+                 experiment_id, 
+                 base_name, 
+                 model_name, 
+                 force=True,
+                 normalize=True,
+                 experiment_params={}
+        ):
+        """
+        Parâmetros
+        ----------
+        model : estimator
+            Modelo base para Grid Search (ex: MLPRegressor)
+        experiment_params : dict
+            Deve conter:
+                'linear_model_name' : str
+                    Nome do modelo ARIMA pré-treinado
+                'val_size' : int
+                    Tamanho do conjunto de validação (obrigatório para Grid Search)
+        """
+        self.model = model
+        self.experiment_id = experiment_id
+        self.base_name = base_name
+        self.model_name = model_name
+        self.experiment_params = experiment_params
+        self.force = force
+        self.normalize = normalize
+    
+    def _calculate_l_max(self, y_true, y_pred, max_search=20):
+        """
+        Calcula o atraso máximo (L_max) usando Cross-Correlation Function (CCF).
+        
+        Regra: L_max é o último lag (índice mais distante) até max_search cuja
+        correlação em valor absoluto seja maior que o limite de significância de 95%:
+        
+            |ccf[lag]| > 1.96 / sqrt(N)
+        
+        Parâmetros
+        ----------
+        y_true : array-like
+            Série real (Z)
+        y_pred : array-like
+            Previsões do modelo não-linear (Ŷ^N)
+        max_search : int, default=20
+            Número máximo de lags a considerar
+        
+        Retorna
+        -------
+        l_max : int
+            Último lag significativo ou 1 se nenhum for significativo
+        """
+        N = len(y_true)
+        
+        # Limite de significância 95%
+        significance_threshold = 1.96 / np.sqrt(N)
+        
+        # Calcular CCF (retorna array com lags negativos e positivos)
+        # ccf(x, y) retorna correlações de x_{t-k} com y_t
+        ccf_values = ccf(y_true, y_pred, adjusted=False)
+        
+        # ccf retorna [lag_-N, ..., lag_0, ..., lag_N]
+        # Queremos apenas lags positivos: [1, 2, ..., max_search]
+        # lag 0 está no meio do array
+        mid_idx = len(ccf_values) // 2
+        
+        # Extrair lags positivos até max_search
+        lags_to_check = min(max_search, len(ccf_values) - mid_idx - 1)
+        
+        l_max = 1  # default mínimo
+        
+        for lag in range(1, lags_to_check + 1):
+            corr_value = abs(ccf_values[mid_idx + lag])
+            if corr_value > significance_threshold:
+                l_max = lag  # atualiza para o último lag significativo
+        
+        return l_max
+    
+    def _grid_search_mlp(self, X_train, y_train, X_val, y_val, stage_name='M_NL'):
+        """
+        Executa Grid Search para encontrar topologia ótima de MLP.
+        
+        Testa topologias de 1 a 30 neurônios na camada oculta.
+        
+        Parâmetros
+        ----------
+        X_train, y_train : arrays
+            Dados de treino
+        X_val, y_val : arrays
+            Dados de validação
+        stage_name : str
+            Nome do estágio ('M_NL' ou 'M_c') para logging
+        
+        Retorna
+        -------
+        best_model : estimator
+            Melhor modelo encontrado pelo Grid Search
+        """
+        print(f"  [Grid Search] Otimizando {stage_name}...")
+        print(f"    Testando topologias de 1 a 30 neurônios...")
+        
+        # Combinar treino e validação para o Grid Search
+        X_combined = np.vstack([X_train, X_val])
+        y_combined = np.concatenate([y_train, y_val])
+        
+        # Criar split manual (treino = primeiros n_train, validação = resto)
+        n_train = len(X_train)
+        from sklearn.model_selection import PredefinedSplit
+        test_fold = [-1] * n_train + [0] * len(X_val)
+        ps = PredefinedSplit(test_fold=test_fold)
+        
+        # Configurar Grid Search
+        param_grid = {
+            'hidden_layer_sizes': [(i,) for i in range(1, 31)],
+            'solver': ['lbfgs', 'adam']
+        }
+        
+        grid_search = GridSearchCV(
+            estimator=clone(self.model),
+            param_grid=param_grid,
+            cv=ps,
+            scoring='neg_mean_squared_error',
+            n_jobs=-1,
+            verbose=0
+        )
+        
+        grid_search.fit(X_combined, y_combined)
+        
+        print(f"    Melhor topologia: {grid_search.best_params_['hidden_layer_sizes']}")
+        print(f"    Melhor solver: {grid_search.best_params_['solver']}")
+        print(f"    Melhor score (neg_MSE): {grid_search.best_score_:.4f}")
+        
+        return grid_search.best_estimator_
+    
+    def _build_combiner_matrix(self, linear_forecast, nonlinear_forecast, l_max):
+        """
+        Constrói a matriz de entrada para o modelo combinador (M_c).
+        
+        Matriz de entrada: [L̂_{t-L_max}, ..., L̂_{t-1}, L̂_t, 
+                            Ŷ^N_{t-L_max}, ..., Ŷ^N_{t-1}, Ŷ^N_t]
+        
+        Dimensão: n_samples × (2 × L_max)
+        
+        Parâmetros
+        ----------
+        linear_forecast : array
+            Previsões do modelo linear (L̂)
+        nonlinear_forecast : array
+            Previsões do modelo não-linear (Ŷ^N)
+        l_max : int
+            Número de lags a usar
+        
+        Retorna
+        -------
+        X_combiner : pd.DataFrame
+            Matriz de entrada para M_c
+        y_combiner : pd.Series
+            Target (série original alinhada)
+        """
+        # Criar DataFrames para facilitar windowing
+        df_linear = pd.DataFrame({'linear': linear_forecast})
+        df_nonlinear = pd.DataFrame({'nonlinear': nonlinear_forecast})
+        
+        # Criar janelas deslizantes com l_max lags
+        linear_wind = input.create_windowing(df_linear, l_max)
+        nonlinear_wind = input.create_windowing(df_nonlinear, l_max)
+        
+        # Renomear colunas para clareza
+        linear_cols = [f'linear_lag_{i}' for i in reversed(range(1, l_max + 1))] + ['linear_t']
+        nonlinear_cols = [f'nonlinear_lag_{i}' for i in reversed(range(1, l_max + 1))] + ['nonlinear_t']
+        
+        linear_wind.columns = linear_cols
+        nonlinear_wind.columns = nonlinear_cols
+        
+        # Concatenar horizontalmente: [lags_lineares | lag_t_linear | lags_nao_lineares | lag_t_nao_linear]
+        X_combiner = pd.concat([linear_wind, nonlinear_wind], axis=1)
+        
+        return X_combiner
+    
+    def split_training_test(self, df_input, test_size, val_size):
+        """
+        Split treino/validação/teste e normalização Min-Max (se habilitada).
+        """
+        df_input_norm = df_input.copy()
+        min_max_scaler_x = None
+        
+        if self.normalize:
+            min_max_scaler_x = preprocessing.MinMaxScaler()
+            
+            # Fit apenas no treino
+            train_end_idx = -(test_size + val_size)
+            if train_end_idx == 0:
+                train_end_idx = len(df_input)
+            
+            min_max_scaler_x.fit(df_input.iloc[:train_end_idx])
+            
+            df_input_norm = pd.DataFrame(
+                min_max_scaler_x.transform(df_input),
+                columns=df_input.columns
+            )
+        
+        # Split
+        X_train = df_input_norm.iloc[:-(test_size + val_size)].values
+        X_val = df_input_norm.iloc[-(test_size + val_size):-test_size].values
+        X_test = df_input_norm.iloc[-test_size:].values
+        
+        return X_train, X_val, X_test, min_max_scaler_x
+    
+    def fit_predict(self):
+        """
+        Pipeline completo do NoLiC:
+        
+        1. Carrega resíduos e previsões do ARIMA pré-treinado
+        2. Treina M_NL (rede nos resíduos) com Grid Search
+        3. Gera previsões Ŷ^N para todo o dataset
+        4. Calcula L_max usando CCF entre série real e Ŷ^N
+        5. Constrói matriz do combinador com lags de L̂ e Ŷ^N
+        6. Treina M_c (rede combinadora) com Grid Search
+        7. Gera previsões finais e calcula métricas
+        """
+        import time
+        start_time = time.time()
+        
+        print(f"\n  [NoLiC] Iniciando pipeline em 3 estágios...")
+        
+        # ====================================================================
+        # ESTÁGIO 1: MODELO LINEAR (ARIMA PRÉ-TREINADO)
+        # ====================================================================
+        print("  [Estágio 1/3] Carregando modelo linear (ARIMA)...")
+        
+        (
+            error_series,
+            ts_forecast,
+            base_info,
+            exec_config
+        ) = input_linear_info(
+            self.experiment_id, 
+            self.base_name, 
+            self.experiment_params, 
+        )
+        
+        original_ts = base_info.original_ts
+        test_size = base_info.test_size
+        val_size = base_info.val_size
+        lag_size = base_info.lag_size_formated
+        
+        print(f"    Linear forecast shape: {ts_forecast.shape}")
+        print(f"    Residuals shape: {error_series.shape}")
+        
+        # ====================================================================
+        # ESTÁGIO 2: MODELO NÃO-LINEAR NOS RESÍDUOS (M_NL)
+        # ====================================================================
+        print("\n  [Estágio 2/3] Treinando modelo não-linear nos resíduos (M_NL)...")
+        
+        # Usar generics.fit_predict_model para resíduos (igual ao Additive)
+        residual_result = generics.fit_predict_model(
+            self.model, 
+            pd.Series(error_series), 
+            self.normalize, 
+            lag_size, 
+            exec_config, 
+            False
+        )
+        
+        # Concatenar todas as previsões de resíduos
+        all_residual_forecasts = np.concatenate((
+            residual_result['train_predict'], 
+            residual_result['val_predict'], 
+            residual_result['test_predict'] 
+        ), axis=0)
+        
+        print(f"    Residual predictions shape: {all_residual_forecasts.shape}")
+        
+        # Previsões não-lineares (resíduos previstos)
+        nonlinear_forecast = all_residual_forecasts
+        
+        # Alinhar linear_forecast ao mesmo tamanho
+        linear_forecast_aligned = ts_forecast[lag_size:]
+        
+        # Série original alinhada (target para o combinador)
+        original_ts_aligned = original_ts[lag_size + lag_size:]
+        
+        print(f"    Aligned linear forecast: {linear_forecast_aligned.shape}")
+        print(f"    Aligned original ts: {original_ts_aligned.shape}")
+        
+        # ====================================================================
+        # ESTÁGIO 3: CÁLCULO DO L_MAX E MODELO COMBINADOR (M_c)
+        # ====================================================================
+        print("\n  [Estágio 3/3] Calculando L_max e treinando combinador (M_c)...")
+        
+        # Calcular L_max usando toda a série disponível até o início do teste
+        # (exclui teste para evitar leakage)
+        train_val_end = -(test_size)
+        if train_val_end == 0:
+            train_val_end = len(original_ts_aligned)
+        
+        l_max = self._calculate_l_max(
+            original_ts_aligned[:train_val_end],
+            nonlinear_forecast[:train_val_end],
+            max_search=20
+        )
+        
+        print(f"    L_max calculado: {l_max}")
+        
+        # Construir matriz do combinador
+        X_combiner = self._build_combiner_matrix(
+            linear_forecast_aligned,
+            nonlinear_forecast,
+            l_max
+        )
+        
+        # Target: série original alinhada com a matriz do combinador
+        # create_windowing já remove os primeiros l_max valores
+        y_combiner = original_ts_aligned[l_max:]
+        
+        print(f"    Combiner matrix shape: {X_combiner.shape}")
+        print(f"    Target shape: {y_combiner.shape}")
+        
+        # Split e normalização
+        X_train_comb, X_val_comb, X_test_comb, scaler_x = self.split_training_test(
+            X_combiner, 
+            test_size, 
+            val_size
+        )
+        
+        # Target split (sem normalização, será feita internamente)
+        y_train_comb = y_combiner[:-(test_size + val_size)]
+        y_val_comb = y_combiner[-(test_size + val_size):-test_size]
+        y_test_comb = y_combiner[-test_size:]
+        
+        print(f"    Train split: X={X_train_comb.shape}, y={y_train_comb.shape}")
+        print(f"    Val split: X={X_val_comb.shape}, y={y_val_comb.shape}")
+        print(f"    Test split: X={X_test_comb.shape}, y={y_test_comb.shape}")
+        
+        # Grid Search para o combinador
+        best_combiner = self._grid_search_mlp(
+            X_train_comb, 
+            y_train_comb, 
+            X_val_comb, 
+            y_val_comb,
+            stage_name='M_c'
+        )
+        
+        # Treinar combinador final com treino + validação
+        X_train_val_comb = np.vstack([X_train_comb, X_val_comb])
+        y_train_val_comb = np.concatenate([y_train_comb, y_val_comb])
+        
+        best_combiner.fit(X_train_val_comb, y_train_val_comb)
+        
+        # Gerar previsões finais
+        train_predict = best_combiner.predict(X_train_comb)
+        val_predict = best_combiner.predict(X_val_comb)
+        test_predict = best_combiner.predict(X_test_comb)
+        
+        time_exec = time.time() - start_time
+        
+        print(f"\n  [NoLiC] Pipeline concluído em {time_exec:.2f}s")
+        
+        # ====================================================================
+        # CÁLCULO DE MÉTRICAS
+        # ====================================================================
+        test_metrics = metrics.gerenerate_metric_results(
+            y_test_comb, 
+            test_predict
+        )
+        
+        if val_size is not None and val_size > 0:
+            val_metrics = metrics.gerenerate_metric_results(
+                y_val_comb, 
+                val_predict
+            )
+        else:
+            val_metrics = None
+        
+        self.metrics_results = {
+            'train_predict': train_predict, 
+            'val_predict': val_predict, 
+            'test_predict': test_predict,
+            'val_metrics': val_metrics,
+            'test_metrics': test_metrics,
+            'time_exec': time_exec,
+            'l_max': l_max,
+            'linear_forecast': linear_forecast_aligned[l_max:],
+            'nonlinear_forecast': nonlinear_forecast[l_max:]
+        }
