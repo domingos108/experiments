@@ -12,3 +12,4 @@ neuralforecast
 papermill
 seaborn
 statsmodels
+pytest

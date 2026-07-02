@@ -15,6 +15,24 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 def is_not_sklearn(model):
     # returns True if it is NOT a scikit-learn class/instance
     return not isinstance(model, BaseEstimator)
+
+
+def resolve_lag_size(base_info):
+    """
+    Resolve o lag_size a usar para uma serie a partir de uma entrada de
+    config.BASE_INFORMATION.
+
+    Chave opcional e aditiva: se `fs_lag_size` estiver presente, ela tem
+    prioridade (usada pelos experimentos de Feature Selection para expor
+    janelas mais profundas de lags aos seletores). Caso contrario, o
+    comportamento e identico ao de sempre -- usa `lag_size`, sem alterar
+    nenhum dos 5 baselines existentes (ver PLANO_ARQUITETURA.md, Secao 1.3).
+    """
+    if "fs_lag_size" in base_info:
+        return base_info["fs_lag_size"]
+    return base_info["lag_size"]
+
+
 class GridSearch:
     def __init__(self, 
                  model_class_exp,
@@ -54,8 +72,8 @@ class GridSearch:
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
         experiment_params['val_size'] = config.VAL_SIZE
-        experiment_params['lag_size'] = config.BASE_INFORMATION[self.base_name]['lag_size']
-        
+        experiment_params['lag_size'] = resolve_lag_size(config.BASE_INFORMATION[self.base_name])
+
         target_list_mean_metrics = []
 
         model_exec = 1 if self.model_exec < 1 else self.model_exec
@@ -100,7 +118,7 @@ class GridSearch:
 
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
-        experiment_params['lag_size'] = config.BASE_INFORMATION[self.base_name]['lag_size']
+        experiment_params['lag_size'] = resolve_lag_size(config.BASE_INFORMATION[self.base_name])
 
         if self.use_val_slipt_for_prev:
             experiment_params['val_size'] = config.VAL_SIZE

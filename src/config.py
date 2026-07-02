@@ -19,29 +19,35 @@ VAL_SIZE = 0.1
 BASE_NAME_LIST = [
     # --- Baseline clássica (17 séries) ---
     'airlines.txt',
-    'ausbee.txt',
+    #'ausbee.txt',
     'austres.txt',
     'coloradoRiver.txt',
-    'gasoline.txt',
-    'heartrate.txt',
-    'lakeerie.txt',
-    'lynx.txt',
-    'milk.txt',
-    'ozon.txt',
-    'pollution.txt',
-    'redwine.txt',
+    #'gasoline.txt',
+    #'heartrate.txt',
+    #'lakeerie.txt',
+    #'lynx.txt',
+    #'milk.txt',
+    #'ozon.txt',
+    #'pollution.txt',
+    #'redwine.txt',
     'sunspot.txt',
-    'taylor.txt',
-    'temperature.txt',
-    'Unemployment.txt',
-    'woolyrnq.txt',
+    #'taylor.txt',
+    #'temperature.txt',
+    #'Unemployment.txt',
+    #'woolyrnq.txt',
 ]
 
 LAG_SIZE_LIST = []
 
 
+# Chave opcional 'fs_lag_size': usada apenas pelos experimentos de Feature
+# Selection (ver PLANO_ARQUITETURA.md, Secao 1.3). Quando presente, tem
+# prioridade sobre 'lag_size' e expõe uma janela de lags mais profunda ao
+# TimeSeriesFeatureSelector -- ex: {'lag_size': 12, 'fs_lag_size': 30}.
+# Nao populada para nenhuma serie ainda: a decisao de quais series recebem
+# lags profundos e do pesquisador, fora do escopo desta tarefa.
 BASE_INFORMATION = {
-    'marecacc.txt': {"freq": "D", 'm': 7 , 'lag_size': 7}, 
+    'marecacc.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
  
     'majaboataosamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
     'maolindasamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
@@ -58,13 +64,13 @@ BASE_INFORMATION = {
     'irradiancesp.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto'  }, 
 
     # --- Baseline clássica: entradas adicionadas ---
-    'airlines.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
+    'airlines.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto', 'fs_lag_size': 20},   # provisório
     'lakeerie.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
     'lynx.txt':         {"freq": "YE",  'm': 1,  'lag_size': 'auto'},   # provisório
     'taylor.txt':       {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
 
     'coloradoRiver.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto' }, 
-    'sunspot.txt': {"freq": "YE", 'm': 1, 'lag_size': 'auto'  }, 
+    'sunspot.txt': {"freq": "YE", 'm': 1, 'lag_size': 'auto', 'fs_lag_size': 30  },
     'milk.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto'  }, 
     'Unemployment.txt': {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
     'ausbee.txt': {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
