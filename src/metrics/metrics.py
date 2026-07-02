@@ -1,4 +1,5 @@
-from glob import glob 
+from glob import glob
+import os
 
 import numpy as np
 import pandas as pd
@@ -125,6 +126,20 @@ def get_real_values(df_prevs):
 
     return df_prevs
 
+def extract_series_name_from_path(pth):
+    """
+    Extrai o nome da serie a partir do caminho de um .pkl salvo por
+    generics.format_names() (<experiment_id>/<serie>_<sufixo>.pkl).
+
+    Usa os.path.basename em vez de pth.split('/')[-1] porque glob() no
+    Windows pode inserir '\\' antes do nome do arquivo mesmo quando o
+    diretorio-base foi construido com '/' (caso de config.MODEL_DATA_PATH,
+    que mistura os dois estilos) -- split('/') sozinho falha nesse caso e
+    vaza parte do experiment_id para o nome da serie.
+    """
+    return os.path.basename(pth).split('_')[0]
+
+
 def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric = 'RMSE'):
     fold, _ = generics.format_names(experiment_id, '', '')
     exec_model = []
@@ -133,7 +148,7 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
 
     for pth in glob(fold+'*'):
         model_name = pth.split('_')[-1].split('.pk')[0]
-        serie_name = pth.split('/')[-1].split('_')[0]
+        serie_name = extract_series_name_from_path(pth)
         exec_pkl = generics.open_saved_result(pth)
         exec_model.append(exec_pkl)
 
