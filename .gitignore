@@ -177,3 +177,7 @@ cython_debug/
 
 #neural forecast
 lightning_logs/
+
+# Artefatos exploratorios/descartaveis (CLAUDE.md Secao 3.3) -- nunca versionar,
+# diferente de data/result/comparisons/ que E versionado intencionalmente.
+data/result/exploratory_analysis/
