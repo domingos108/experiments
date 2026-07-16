@@ -12,7 +12,10 @@ Cobre o escopo minimo da Tarefa 1 do PLANO_ARQUITETURA.md (Secao 3, item 1):
 import numpy as np
 import pytest
 from sklearn.base import clone
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+from sklearn.linear_model import LassoCV
+from sklearn.model_selection import KFold, TimeSeriesSplit
 
 from model.feature_selection import TimeSeriesFeatureSelector
 from tests.model.conftest import FS_DEV_SERIES
@@ -94,6 +97,89 @@ class TestMutualInfoStrategy:
         assert np.array_equal(selector.selected_indices_, expected_indices)
 
 
+class TestRfEmbeddedStrategy:
+    def test_ranks_nonlinear_informative_feature_above_pure_noise(self):
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", k=1, random_state=0).fit(X, y)
+
+        assert selector.selected_indices_[0] == 0
+
+    def test_deterministic_with_fixed_random_state(self):
+        """model_exec=10 repete o fit varias vezes na mesma configuracao --
+        precisa ser reprodutivel para a comparacao de hiperparametros do
+        GridSearch fazer sentido."""
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector_a = TimeSeriesFeatureSelector(strategy="rf_embedded", k=3, random_state=42).fit(X, y)
+        selector_b = TimeSeriesFeatureSelector(strategy="rf_embedded", k=3, random_state=42).fit(X, y)
+
+        assert np.array_equal(selector_a.selected_indices_, selector_b.selected_indices_)
+
+    def test_matches_plain_sklearn_random_forest_feature_importances(self):
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+        k = 3
+
+        expected_model = RandomForestRegressor(random_state=0).fit(X, y)
+        expected_indices = np.sort(np.argsort(expected_model.feature_importances_)[::-1][:k])
+
+        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", k=k, random_state=0).fit(X, y)
+
+        assert np.array_equal(selector.selected_indices_, expected_indices)
+
+
+class TestLassoStrategy:
+    def test_selects_the_two_truly_linear_informative_features(self):
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+
+        selector = TimeSeriesFeatureSelector(strategy="lasso", k=2, random_state=0).fit(X, y)
+
+        assert set(selector.selected_indices_.tolist()) == {0, 3}
+
+    def test_cv_is_time_series_split_never_kfold(self, monkeypatch):
+        """Regra nao-negociavel do PLANO_ARQUITETURA.md (Secao 2, metodo #4):
+        o cv interno do LassoCV NUNCA pode ser um KFold aleatorio -- espiona
+        o construtor de LassoCV e confirma o tipo exato do cv recebido."""
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+        captured = {}
+
+        real_lasso_cv = LassoCV
+
+        def spy_lasso_cv(*args, **kwargs):
+            captured["cv"] = kwargs.get("cv")
+            return real_lasso_cv(*args, **kwargs)
+
+        monkeypatch.setattr("model.feature_selection.LassoCV", spy_lasso_cv)
+
+        TimeSeriesFeatureSelector(strategy="lasso", k=2, random_state=0).fit(X, y)
+
+        assert isinstance(captured["cv"], TimeSeriesSplit)
+        assert not isinstance(captured["cv"], KFold)
+
+    def test_fit_only_ever_scores_the_exact_rows_it_was_given(self, monkeypatch):
+        """Mesma prova mecanica de Zero Data Leakage usada para f_test,
+        aplicada ao lasso -- que e o outro metodo com CV interna, portanto o
+        de maior risco de vazamento indireto."""
+        X_train, y_train = _synthetic_linear_data(n_samples=50, n_features=6, seed=1)
+        captured = {}
+
+        real_lasso_cv = LassoCV
+
+        class SpyLassoCV(real_lasso_cv):
+            def fit(self, X, y, **kwargs):
+                captured["X"] = np.array(X, copy=True)
+                captured["y"] = np.array(y, copy=True)
+                return super().fit(X, y, **kwargs)
+
+        monkeypatch.setattr("model.feature_selection.LassoCV", SpyLassoCV)
+
+        TimeSeriesFeatureSelector(strategy="lasso", k=2, random_state=0).fit(X_train, y_train)
+
+        assert captured["X"].shape == X_train.shape
+        assert np.array_equal(captured["X"], X_train)
+        assert np.array_equal(captured["y"], y_train)
+
+
 class TestSklearnContract:
     def test_get_params_returns_exactly_constructor_args(self):
         selector = TimeSeriesFeatureSelector(strategy="f_test", k=4)
@@ -123,7 +209,7 @@ class TestRealSeriesData:
     def test_fs_dev_series_is_exactly_the_four_series_from_plano_arquitetura(self):
         assert FS_DEV_SERIES == ["airlines", "austres", "coloradoRiver", "sunspot"]
 
-    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info"])
+    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info", "rf_embedded", "lasso"])
     def test_fit_transform_succeeds_on_real_series_lags(self, fs_dev_series_train_data, strategy):
         X_train, y_train = fs_dev_series_train_data
         k = min(3, X_train.shape[1])

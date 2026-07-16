@@ -69,12 +69,12 @@ BASE_INFORMATION = {
     'lynx.txt':         {"freq": "YE",  'm': 1,  'lag_size': 'auto'},   # provisório
     'taylor.txt':       {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
 
-    'coloradoRiver.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto' }, 
+    'coloradoRiver.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto', 'fs_lag_size': 30 },
     'sunspot.txt': {"freq": "YE", 'm': 1, 'lag_size': 'auto', 'fs_lag_size': 30  },
     'milk.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto'  }, 
     'Unemployment.txt': {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
     'ausbee.txt': {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
-    'austres.txt': {"freq": "QE", 'm': 1, 'lag_size': 'auto'  }, 
+    'austres.txt': {"freq": "QE", 'm': 1, 'lag_size': 'auto', 'fs_lag_size': 12  },
     'heartrate.txt': {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
     "ozon.txt": {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
     "pollution.txt": {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 

@@ -24,12 +24,16 @@ class TestResolveLagSizeRegression:
             assert resolve_lag_size(base_info) == base_info["lag_size"]
 
     def test_fs_lag_size_series_resolve_to_the_deliberately_configured_value(self):
-        """As unicas series com fs_lag_size hoje sao as 2 usadas na Tarefa 2
-        do PLANO_ARQUITETURA.md (integracao no arima_mlp.ipynb). Trava os
-        valores exatos para que uma mudanca futura em config.py seja
-        intencional e visivel, nao silenciosa."""
+        """As 4 series de FS_DEV_SERIES tem fs_lag_size definido (Tarefas 2 e
+        3 do PLANO_ARQUITETURA.md). Trava os valores exatos para que uma
+        mudanca futura em config.py seja intencional e visivel, nao
+        silenciosa. Valores calculados a partir do pipeline real -- ver
+        pre-checks das Tarefas 2 e 3 (df_train resultante medido, nao
+        estimado)."""
         assert resolve_lag_size(config.BASE_INFORMATION["sunspot.txt"]) == 30
         assert resolve_lag_size(config.BASE_INFORMATION["airlines.txt"]) == 20
+        assert resolve_lag_size(config.BASE_INFORMATION["austres.txt"]) == 12
+        assert resolve_lag_size(config.BASE_INFORMATION["coloradoRiver.txt"]) == 30
 
 
 class TestResolveLagSizeFallbackActive:

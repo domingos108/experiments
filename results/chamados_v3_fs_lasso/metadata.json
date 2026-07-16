@@ -1,0 +1,24 @@
+{
+  "experiment_id": "chamados_v3_fs_lasso",
+  "notebook": "notebook/residual_hydridsystem/arima_mlp_lasso.ipynb",
+  "hibrido": "ARIMA-MLP (Additive)",
+  "linear_model_name": "1arima",
+  "feature_selection": {
+    "strategy": "lasso",
+    "model_name_suffix": "lasso",
+    "selector_k_grid": [5, 10, 15],
+    "cv": "TimeSeriesSplit(n_splits=3) -- nunca KFold aleatorio"
+  },
+  "estimator_grid": {
+    "hidden_layer_sizes": [10, 20, 50],
+    "max_iter": [1000]
+  },
+  "model_exec": 10,
+  "series": [
+    {"nome": "airlines.txt", "fs_lag_size": 20},
+    {"nome": "austres.txt", "fs_lag_size": 12},
+    {"nome": "coloradoRiver.txt", "fs_lag_size": 30},
+    {"nome": "sunspot.txt", "fs_lag_size": 30}
+  ],
+  "nota": "Template preparado na Tarefa 3 (Parte D) -- rodar via RUNBOOK.md. metrics.csv/metrics_detail.csv aparecem nesta pasta apos a execucao manual."
+}

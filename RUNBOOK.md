@@ -6,15 +6,24 @@ Guia prático para você (pesquisador) repetir/variar experimentos de Feature Se
 
 ## 1. Trocar a série
 
-Hoje restrito a `FS_DEV_SERIES` (`airlines`, `austres`, `coloradoRiver`, `sunspot` — definido em [tests/model/conftest.py](tests/model/conftest.py)). Expandir essa lista é decisão explícita futura, não algo a fazer implicitamente ao seguir este runbook.
+Hoje restrito a `FS_DEV_SERIES` (`airlines`, `austres`, `coloradoRiver`, `sunspot` — definido em [tests/model/conftest.py](tests/model/conftest.py)). Desde a Tarefa 3, as 4 já têm `fs_lag_size` definido e os 4 notebooks dedicados já cobrem todas. Expandir a lista além dessas 4 é decisão explícita futura, não algo a fazer implicitamente ao seguir este runbook.
 
 No notebook (ex. `arima_mlp_ftest.ipynb`), a série entra na célula de execução:
 
 ```python
-fs_series_list = ['sunspot.txt', 'airlines.txt']   # troque aqui
+fs_series_list = ['airlines.txt', 'austres.txt', 'coloradoRiver.txt', 'sunspot.txt']   # troque/reduza aqui
 ```
 
-Se a série usa `fs_lag_size` (janela profunda de lags, ver Seção 1.3 do PLANO_ARQUITETURA.md), confirme que ela está registrada em `src/config.py → BASE_INFORMATION['<serie>.txt']['fs_lag_size']`. Hoje só `sunspot.txt` (30) e `airlines.txt` (20) têm essa chave. Antes de rodar uma 3ª série pela primeira vez, calcule quantas linhas de treino sobram após o janelamento duplo (ver Tarefa 2: script rápido usando `input.open_format_train_val_test` — não assuma que "cabe", meça).
+`fs_lag_size` de cada série (`src/config.py → BASE_INFORMATION['<serie>.txt']['fs_lag_size']`), calculado com o pipeline real (não estimado — ver Tarefas 2 e 3 para o método):
+
+| Série | `fs_lag_size` | Motivo |
+|---|---|---|
+| `sunspot.txt` | 30 | N grande (288), folga confortável |
+| `coloradoRiver.txt` | 30 | N muito grande (744), folga ampla |
+| `airlines.txt` | 20 | N médio (144); 30 deixava só 62 linhas de treino (2:1) |
+| `austres.txt` | 12 | N pequeno (89); mesmo 20 já ficava em 1.9:1 |
+
+Antes de registrar `fs_lag_size` para uma 5ª série, meça `df_train` resultante (script do pré-check das Tarefas 2/3 usando `input.open_format_train_val_test`) e confirme com o pesquisador antes de gravar em `config.py` — nunca assuma que um valor "cabe".
 
 ## 2. Trocar a estratégia de FS e os hiperparâmetros do seletor
 
@@ -22,10 +31,12 @@ Estratégia (fixa por notebook — nunca misturar no mesmo grid):
 
 ```python
 model = Pipeline([
-    ('selector', TimeSeriesFeatureSelector(strategy='mutual_info')),  # 'f_test' | 'mutual_info' hoje
+    ('selector', TimeSeriesFeatureSelector(strategy='mutual_info')),  # 'f_test' | 'mutual_info' | 'rf_embedded' | 'lasso' hoje
     ('estimator', MLPRegressor(activation='logistic', solver='lbfgs')),
 ])
 ```
+
+`rf_embedded` (`RandomForestRegressor`, importância por redução de impureza) e `lasso` (`LassoCV(cv=TimeSeriesSplit(n_splits=3))`, regularização L1) foram adicionados na Tarefa 3. `rfecv`/`perm_importance` ainda não existem (Tarefa 4).
 
 Hiperparâmetros via `model_parameters`, convenção `selector__*`/`estimator__*`:
 
@@ -110,19 +121,77 @@ Detalhada na Seção 5 do [PLANO_ARQUITETURA.md](PLANO_ARQUITETURA.md#5-convenç
 <hibrido>_<estrategia_fs>.ipynb
 ```
 
-| Notebook | Status |
-|---|---|
-| `arima_mlp_ftest.ipynb` | Implementado |
-| `arima_mlp_mutual_info.ipynb` | Não implementado — replicar `arima_mlp_ftest.ipynb` trocando `strategy` |
-| `arima_mlp_rf_embedded.ipynb` | Não implementado — depende da estratégia `rf_embedded` ainda não existir em `feature_selection.py` (Tarefa 3) |
-| `arima_mlp_lasso.ipynb` | Não implementado — idem, estratégia `lasso` (Tarefa 3) |
-| `arima_mlp_rfecv.ipynb` | Não implementado — idem, estratégia `rfecv` (Tarefa 4) |
-| `arima_svr_ftest.ipynb` | Não implementado |
-| `nonlinear_mlp_ftest.ipynb` (e variantes) | Não implementado — só quando o roadmap de combinações não-lineares de 2–3 estágios (CLAUDE.md Seção 4) for implementado |
+| Notebook | Status | `experiment_id` proposto |
+|---|---|---|
+| `arima_mlp_ftest.ipynb` | Pronto para rodar (Tarefa 3: 4 séries, nomenclatura nova) | `chamados_v3_fs_ftest` |
+| `arima_mlp_mutual_info.ipynb` | Pronto para rodar (Tarefa 3) | `chamados_v3_fs_mutualinfo` |
+| `arima_mlp_rf_embedded.ipynb` | Pronto para rodar (Tarefa 3) | `chamados_v3_fs_rfembedded` |
+| `arima_mlp_lasso.ipynb` | Pronto para rodar (Tarefa 3) | `chamados_v3_fs_lasso` |
+| `arima_mlp_rfecv.ipynb` | Não implementado — estratégia `rfecv` ainda não existe em `feature_selection.py` (Tarefa 4) |  |
+| `arima_svr_ftest.ipynb` (e variantes) | Não implementado — fica para depois dos 4 métodos validados no MLP |  |
+| `nonlinear_mlp_ftest.ipynb` (e variantes) | Não implementado — só quando o roadmap de combinações não-lineares de 2–3 estágios (CLAUDE.md Seção 4) for implementado |  |
 
 `arima_mlp.ipynb`/`arima_svr.ipynb` (sem sufixo) **nunca** recebem essas mudanças — são os baselines intocáveis da Seção 3 do CLAUDE.md.
 
-## 7. Checklist antes de considerar a rodada concluída
+## 7. Nomenclatura do `.pkl` com seletor e metadado da rodada
+
+Notebooks com `Pipeline`/seletor produzem `.pkl` com sufixo de estratégia **sem underscore**, concatenado direto ao `model_name` do híbrido (ex. `1amv1ftest`, `1amv1mutualinfo`, `1amv1rfembedded`, `1amv1lasso`) — nunca `1amv1_ftest` (underscore quebraria a extração de nome de modelo em `metrics.py`, que pega só o último token separado por `_`; provado por teste de integração em `tests/metrics/test_metrics.py`). Os 5 baselines continuam sem qualquer sufixo.
+
+Cada `results/<experiment_id>/` tem um `metadata.json` documentando estratégia, `fs_lag_size` por série, grids de hiperparâmetro e séries incluídas — evita ter que adivinhar isso olhando só o CSV. Os 4 templates da Tarefa 3 já existem (`results/chamados_v3_fs_*/metadata.json`); ao rodar uma configuração nova, copie um desses como ponto de partida.
+
+## 8. Comandos desta rodada (Tarefa 3 — 4 combinações prontas para rodar manualmente)
+
+**Passo 0 — copiar o ARIMA pré-treinado para as 4 pastas novas (mesmo modelo, não retreina):**
+
+```bash
+for exp in chamados_v3_fs_ftest chamados_v3_fs_mutualinfo chamados_v3_fs_rfembedded chamados_v3_fs_lasso; do
+  mkdir -p "data/result/$exp"
+  for serie in airlines austres coloradoRiver sunspot; do
+    cp "data/result/chamados/${serie}_1arima.pkl" "data/result/$exp/${serie}_1arima.pkl"
+  done
+done
+```
+
+**Passo 1 — rodar cada notebook via papermill, um de cada vez (observe a saída antes de ir para o próximo):**
+
+```bash
+export PYTHONPATH="$(pwd)/src:$(pwd):$PYTHONPATH"
+
+.venv/Scripts/python.exe -m papermill \
+  notebook/residual_hydridsystem/arima_mlp_ftest.ipynb \
+  notebook/executed/arima_mlp_ftest_v3.ipynb \
+  --kernel python3 --execution-timeout 3600 --progress-bar
+
+.venv/Scripts/python.exe -m papermill \
+  notebook/residual_hydridsystem/arima_mlp_mutual_info.ipynb \
+  notebook/executed/arima_mlp_mutual_info_v3.ipynb \
+  --kernel python3 --execution-timeout 3600 --progress-bar
+
+.venv/Scripts/python.exe -m papermill \
+  notebook/residual_hydridsystem/arima_mlp_rf_embedded.ipynb \
+  notebook/executed/arima_mlp_rf_embedded_v3.ipynb \
+  --kernel python3 --execution-timeout 3600 --progress-bar
+
+.venv/Scripts/python.exe -m papermill \
+  notebook/residual_hydridsystem/arima_mlp_lasso.ipynb \
+  notebook/executed/arima_mlp_lasso_v3.ipynb \
+  --kernel python3 --execution-timeout 3600 --progress-bar
+```
+
+**Passo 2 — agregar e exportar métricas de cada um (isolado, não toca `results/baseline_metrics.csv`):**
+
+```bash
+for exp in chamados_v3_fs_ftest chamados_v3_fs_mutualinfo chamados_v3_fs_rfembedded chamados_v3_fs_lasso; do
+  PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe src/utils/export_metrics_to_csv.py \
+    --result-dir "data/result/$exp" \
+    --output "results/$exp/metrics.csv" \
+    --detail
+done
+```
+
+**Passo 3 — checklist da Seção 9 antes de considerar concluído.**
+
+## 9. Checklist antes de considerar a rodada concluída
 
 - [ ] Hashes dos `.pkl` dos 5 baselines em `data/result/chamados/` idênticos antes/depois (`sha256sum data/result/chamados/*.pkl`, comparar com um snapshot tirado antes de rodar).
 - [ ] `results/baseline_metrics.csv`/`baseline_metrics_detail.csv` da raiz idênticos antes/depois (mesmo hash).
