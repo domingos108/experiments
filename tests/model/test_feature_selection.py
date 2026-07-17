@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, mutual_info_regression
 from sklearn.linear_model import LassoCV
 from sklearn.model_selection import KFold, TimeSeriesSplit
 
@@ -38,6 +38,18 @@ def _synthetic_nonlinear_data(n_samples=200, n_features=8, informative_idx=0, se
     return X, y
 
 
+def _synthetic_sparse_linear_data(n_samples=200, n_features=10, n_informative=2, seed=0):
+    """Alvo e combinacao linear de `n_informative` colunas (as primeiras);
+    controla o grau de esparsidade do sinal para testar contagem variavel de
+    features selecionadas por SelectFromModel (Tarefa 3.1)."""
+    rng = np.random.RandomState(seed)
+    X = rng.uniform(-3, 3, size=(n_samples, n_features))
+    coef = np.zeros(n_features)
+    coef[:n_informative] = rng.uniform(2, 5, size=n_informative)
+    y = X @ coef + 0.1 * rng.normal(size=n_samples)
+    return X, y
+
+
 class TestStrategyValidation:
     def test_unknown_strategy_raises_on_fit(self):
         X, y = _synthetic_linear_data()
@@ -51,6 +63,21 @@ class TestStrategyValidation:
         selector = TimeSeriesFeatureSelector(strategy="f_test", k=invalid_k)
         with pytest.raises(ValueError, match="k"):
             selector.fit(X, y)
+
+    @pytest.mark.parametrize("strategy", ["rf_embedded", "lasso"])
+    @pytest.mark.parametrize("unused_k", [0, -1, -5])
+    def test_non_positive_k_does_not_raise_for_embedded_strategies(self, strategy, unused_k):
+        """Achado de code-review na Tarefa 3.1: k NAO e lido por rf_embedded/
+        lasso (docstring da classe) -- k=0/negativo nao pode mais disparar
+        ValueError para essas duas estrategias, senao a mensagem do
+        docstring ('k NAO e lido') fica inconsistente com o comportamento
+        real."""
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+        selector = TimeSeriesFeatureSelector(strategy=strategy, k=unused_k, random_state=0)
+
+        selector.fit(X, y)  # nao deve levantar
+
+        assert selector.selected_indices_.shape[0] >= 1
 
 
 class TestFTestStrategy:
@@ -98,12 +125,18 @@ class TestMutualInfoStrategy:
 
 
 class TestRfEmbeddedStrategy:
+    """Tarefa 3.1: rf_embedded usa SelectFromModel(threshold=None) -- o numero
+    de features selecionadas emerge do ajuste (corte no 'mean' das
+    importancias, resolvido automaticamente pelo sklearn para estimadores
+    sem atributo `penalty` -- ver PLANO_ARQUITETURA.md Secao 1.5), nao mais
+    um `k` fixo de grid search."""
+
     def test_ranks_nonlinear_informative_feature_above_pure_noise(self):
         X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
 
-        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", k=1, random_state=0).fit(X, y)
+        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=0).fit(X, y)
 
-        assert selector.selected_indices_[0] == 0
+        assert 0 in selector.selected_indices_.tolist()
 
     def test_deterministic_with_fixed_random_state(self):
         """model_exec=10 repete o fit varias vezes na mesma configuracao --
@@ -111,30 +144,113 @@ class TestRfEmbeddedStrategy:
         GridSearch fazer sentido."""
         X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
 
-        selector_a = TimeSeriesFeatureSelector(strategy="rf_embedded", k=3, random_state=42).fit(X, y)
-        selector_b = TimeSeriesFeatureSelector(strategy="rf_embedded", k=3, random_state=42).fit(X, y)
+        selector_a = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=42).fit(X, y)
+        selector_b = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=42).fit(X, y)
 
         assert np.array_equal(selector_a.selected_indices_, selector_b.selected_indices_)
 
-    def test_matches_plain_sklearn_random_forest_feature_importances(self):
+    def test_matches_plain_sklearn_select_from_model_with_default_threshold(self):
+        """Corretude: o resultado deve ser identico a usar SelectFromModel
+        puro do sklearn com threshold=None (nao uma reimplementacao propria
+        do corte por importancia)."""
         X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
-        k = 3
 
-        expected_model = RandomForestRegressor(random_state=0).fit(X, y)
-        expected_indices = np.sort(np.argsort(expected_model.feature_importances_)[::-1][:k])
+        expected = SelectFromModel(
+            RandomForestRegressor(random_state=0), threshold=None
+        ).fit(X, y)
+        expected_indices = np.sort(np.where(expected.get_support())[0])
 
-        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", k=k, random_state=0).fit(X, y)
+        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=0).fit(X, y)
 
         assert np.array_equal(selector.selected_indices_, expected_indices)
+
+    def test_k_parameter_is_ignored_for_this_strategy(self):
+        """`k` deixa de ser lido por rf_embedded/lasso (Tarefa 3.1) -- valores
+        diferentes de `k` nao podem alterar o resultado, que agora e
+        inteiramente decidido pelo threshold do SelectFromModel."""
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector_k1 = TimeSeriesFeatureSelector(strategy="rf_embedded", k=1, random_state=0).fit(X, y)
+        selector_k7 = TimeSeriesFeatureSelector(strategy="rf_embedded", k=7, random_state=0).fit(X, y)
+
+        assert np.array_equal(selector_k1.selected_indices_, selector_k7.selected_indices_)
+
+    def test_number_of_selected_features_varies_with_data_sparsity(self):
+        """Requisito central da Tarefa 3.1: a contagem de features
+        selecionadas deve variar conforme os dados, nao ser fixa. Dados com
+        sinal concentrado em poucas colunas devem selecionar menos features
+        que dados com sinal espalhado por muitas colunas."""
+        X_sparse, y_sparse = _synthetic_sparse_linear_data(n_features=10, n_informative=2, seed=0)
+        X_dense, y_dense = _synthetic_sparse_linear_data(n_features=10, n_informative=8, seed=0)
+
+        selector_sparse = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=0).fit(X_sparse, y_sparse)
+        selector_dense = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=0).fit(X_dense, y_dense)
+
+        assert selector_sparse.selected_indices_.shape[0] != selector_dense.selected_indices_.shape[0]
 
 
 class TestLassoStrategy:
     def test_selects_the_two_truly_linear_informative_features(self):
         X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
 
-        selector = TimeSeriesFeatureSelector(strategy="lasso", k=2, random_state=0).fit(X, y)
+        selector = TimeSeriesFeatureSelector(strategy="lasso", random_state=0).fit(X, y)
 
         assert set(selector.selected_indices_.tolist()) == {0, 3}
+
+    def test_matches_plain_sklearn_select_from_model_with_default_threshold(self):
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+        cv = TimeSeriesSplit(n_splits=3)
+
+        expected = SelectFromModel(
+            LassoCV(cv=cv, random_state=0, max_iter=10000), threshold=None
+        ).fit(X, y)
+        expected_indices = np.sort(np.where(expected.get_support())[0])
+
+        selector = TimeSeriesFeatureSelector(strategy="lasso", random_state=0).fit(X, y)
+
+        assert np.array_equal(selector.selected_indices_, expected_indices)
+
+    def test_k_parameter_is_ignored_for_this_strategy(self):
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+
+        selector_k1 = TimeSeriesFeatureSelector(strategy="lasso", k=1, random_state=0).fit(X, y)
+        selector_k7 = TimeSeriesFeatureSelector(strategy="lasso", k=7, random_state=0).fit(X, y)
+
+        assert np.array_equal(selector_k1.selected_indices_, selector_k7.selected_indices_)
+
+    def test_number_of_selected_features_varies_with_data_sparsity(self):
+        X_sparse, y_sparse = _synthetic_sparse_linear_data(n_features=10, n_informative=2, seed=2)
+        X_dense, y_dense = _synthetic_sparse_linear_data(n_features=10, n_informative=8, seed=2)
+
+        selector_sparse = TimeSeriesFeatureSelector(strategy="lasso", random_state=0).fit(X_sparse, y_sparse)
+        selector_dense = TimeSeriesFeatureSelector(strategy="lasso", random_state=0).fit(X_dense, y_dense)
+
+        assert selector_sparse.selected_indices_.shape[0] != selector_dense.selected_indices_.shape[0]
+
+    def test_falls_back_to_one_feature_when_lasso_zeroes_every_coefficient(self):
+        """Bug real encontrado por code-review (angulo cross-file) na Tarefa
+        3.1: SelectFromModel(LassoCV(...), threshold=None) usa um limiar fixo
+        de 1e-5 para estimadores L1 -- se o alvo nao tem NENHUMA relacao
+        linear com X (ex: residuo ARIMA de uma serie ja bem ajustada
+        linearmente, ou -- caso extremo reproduzido aqui -- y constante),
+        TODOS os coeficientes do Lasso podem zerar, e SelectFromModel
+        seleciona 0 features. `transform()` retornaria shape (n, 0), que
+        quebra MLPRegressor.fit() com
+        'Found array with 0 feature(s)... while a minimum of 1 is required'.
+        rf_embedded NAO tem esse problema (limiar 'mean' usa `>=`, entao o
+        caso degenerado de importancias todas zero ainda satisfaz o proprio
+        threshold e seleciona todas as features, nunca zero) -- confirmado
+        por reproducao direta contra o sklearn instalado antes deste teste.
+        A correcao deve garantir o mesmo invariante de todas as outras 3
+        estrategias: pelo menos 1 feature sempre sobrevive."""
+        X = np.random.RandomState(0).normal(size=(100, 10))
+        y = np.zeros(100)  # sem NENHUMA relacao com X -- forca Lasso a zerar tudo
+
+        selector = TimeSeriesFeatureSelector(strategy="lasso", random_state=0).fit(X, y)
+
+        assert selector.selected_indices_.shape[0] >= 1
+        X_transformed = selector.transform(X)
+        assert X_transformed.shape[1] >= 1
 
     def test_cv_is_time_series_split_never_kfold(self, monkeypatch):
         """Regra nao-negociavel do PLANO_ARQUITETURA.md (Secao 2, metodo #4):
@@ -209,8 +325,8 @@ class TestRealSeriesData:
     def test_fs_dev_series_is_exactly_the_four_series_from_plano_arquitetura(self):
         assert FS_DEV_SERIES == ["airlines", "austres", "coloradoRiver", "sunspot"]
 
-    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info", "rf_embedded", "lasso"])
-    def test_fit_transform_succeeds_on_real_series_lags(self, fs_dev_series_train_data, strategy):
+    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info"])
+    def test_fit_transform_succeeds_on_real_series_lags_fixed_k(self, fs_dev_series_train_data, strategy):
         X_train, y_train = fs_dev_series_train_data
         k = min(3, X_train.shape[1])
 
@@ -220,6 +336,22 @@ class TestRealSeriesData:
         assert selector.selected_indices_.shape == (k,)
         assert np.all((selector.selected_indices_ >= 0) & (selector.selected_indices_ < X_train.shape[1]))
         assert X_transformed.shape == (X_train.shape[0], k)
+
+    @pytest.mark.parametrize("strategy", ["rf_embedded", "lasso"])
+    def test_fit_transform_succeeds_on_real_series_lags_variable_count(self, fs_dev_series_train_data, strategy):
+        """rf_embedded/lasso (Tarefa 3.1): a contagem selecionada e decidida
+        pelo SelectFromModel, nao por `k` -- so validamos que fica dentro do
+        intervalo valido [1, n_features_total] e que transform() e
+        consistente com selected_indices_."""
+        X_train, y_train = fs_dev_series_train_data
+
+        selector = TimeSeriesFeatureSelector(strategy=strategy, random_state=0).fit(X_train, y_train)
+        X_transformed = selector.transform(X_train)
+        n_selected = selector.selected_indices_.shape[0]
+
+        assert 1 <= n_selected <= X_train.shape[1]
+        assert np.all((selector.selected_indices_ >= 0) & (selector.selected_indices_ < X_train.shape[1]))
+        assert X_transformed.shape == (X_train.shape[0], n_selected)
 
 
 class TestZeroDataLeakage:
@@ -255,3 +387,19 @@ class TestZeroDataLeakage:
 
         forbidden_attrs = {"X", "y", "X_", "y_", "X_train", "y_train"}
         assert forbidden_attrs.isdisjoint(vars(selector).keys())
+
+
+class TestNFeaturesInAttribute:
+    """Tarefa 3.1, Parte C: o script de extracao de features selecionadas
+    (src/utils/export_selected_features.py) precisa saber o total de
+    features candidatas (n_features_total), nao so as selecionadas -- exposto
+    de forma uniforme nas 4 estrategias via `n_features_in_` (convencao
+    sklearn), setado a partir de X.shape[1] em fit()."""
+
+    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info", "rf_embedded", "lasso"])
+    def test_n_features_in_matches_input_column_count(self, strategy):
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+
+        selector = TimeSeriesFeatureSelector(strategy=strategy, k=2, random_state=0).fit(X, y)
+
+        assert selector.n_features_in_ == 8

@@ -69,6 +69,28 @@ Sem `fs_lag_size` definido, o comportamento é idêntico ao atual (`.get()` cai 
 
 Sem mudança: a inversão de normalização/diferenciação de `y` (MinMaxScaler + KPSS) permanece **fora** do `Pipeline`, dentro de `Additive.fit_predict()`/`generics.format_forecats`. O `Pipeline` encapsula estritamente `[selector, estimator]` sobre `X`.
 
+### 1.5 Tarefa 3.1 — Reversão para `SelectFromModel` nativo + registro de features selecionadas
+
+A Tarefa 3 implementou `rf_embedded`/`lasso` como top-k uniforme (mesmo contrato de `f_test`/`mutual_info`, `k` fixo pesquisável). A pedido do orientador, a Tarefa 3.1 reverte isso: `rf_embedded`/`lasso` passam a decidir o nº de features **pelo próprio modelo** (`SelectFromModel`), não mais por um `k` de grid search.
+
+**Threshold do `SelectFromModel`: `threshold=None` (default do sklearn), não um valor manual.** Investigação do código-fonte do sklearn (`sklearn.feature_selection._from_model._calculate_threshold`) confirma que o default já resolve exatamente para a filosofia que motivou essa reversão — "nº de features emerge do ajuste", sem inventar um corte arbitrário:
+- `LassoCV`: detectado via `"Lasso" in estimator.__class__.__name__` → threshold = `1e-5` (mantém qualquer coeficiente não zerado pela esparsidade L1 — a única coisa que faz sentido pedir de um seletor L1).
+- `RandomForestRegressor`: sem esse padrão → threshold = `'mean'` das importâncias (uso canônico de `SelectFromModel` com modelos de árvore).
+
+**`TimeSeriesFeatureSelector` continua sendo a única classe pública** (não uma troca por `SelectFromModel` cru no Pipeline): para `rf_embedded`/`lasso`, `fit()` cria e ajusta um `SelectFromModel(estimator, threshold=None)` internamente e converte `get_support()` em `self.selected_indices_` (mesmo atributo/contrato usado por `f_test`/`mutual_info` e por `transform()`). Isso mantém uma extração pós-hoc uniforme entre as 4 estratégias (ver abaixo) e não exige tocar `transform()`. `k` deixa de ser lido nessas duas estratégias; os notebooks correspondentes removem `selector__k` de `model_parameters`.
+
+**Registro do nº/índices de features selecionadas — decisão de design (Tarefa 3.1, validada empiricamente antes de implementar):**
+
+`Additive`/`SKlearnModel` guardam `self.model` (o `Pipeline`), e `generics.fit_predict_ml_schemma` faz `model.fit(...)` **mutando esse objeto in place**. `GridSearch.execution()` serializa a própria instância `Additive`/`SKlearnModel` inteira (`predict_results.append({'experiment': model_exp_test, ...})` → `generics.save_result`) — ou seja, **o seletor já ajustado (com `selected_indices_`) já sobrevive dentro do `.pkl` de cada execução, hoje, sem qualquer mudança em `generics.py`**. Confirmado por round-trip real de pickle (`save_result`/`open_saved_result`) antes de decidir a abordagem.
+
+Por isso a Parte C da Tarefa 3.1 é um **script de extração pós-hoc**, não uma mudança na gravação: `src/utils/export_selected_features.py`, mesmo esqueleto de `src/utils/export_metrics_to_csv.py` (`parse_pkl_path`, varredura de `.pkl`, CLI `--result-dir`/`--output`). Para cada repetição, lê `entry['experiment'].model.named_steps['selector']` (quando existir — `.pkl` sem seletor, como os 5 baselines, são ignorados com aviso, não erro) e produz:
+- `results/<experiment_id>/selected_features.csv` — agregado (média/desvio de `n_features_selected` por série × modelo), mesmo padrão de `aggregate_mean` em `export_metrics_to_csv.py`.
+- `results/<experiment_id>/selected_features_detail.csv` — uma linha por repetição: `experiment_id, serie, modelo, repeticao, strategy, n_features_selected, n_features_total, selected_indices, selected_lag_names`.
+
+`selected_lag_names` mapeia índice → nome de coluna (`lag_k`) sem precisar reconstruir o windowing: como `create_windowing`/`input.open_format_train_val_test` sempre nomeiam as colunas `lag_L, lag_{L-1}, ..., lag_1` (L = nº total de features, horizon=1 em todos os notebooks FS), a coluna de índice posicional `j` corresponde a `lag_{L-j}`.
+
+**Variabilidade entre repetições (`model_exec=10`) é esperada e não suprimida.** `TimeSeriesFeatureSelector(strategy='rf_embedded')` já usa `random_state=None` por padrão desde a Tarefa 3 (nenhum notebook fixa `selector__random_state`) — cada uma das 10 repetições re-ajusta o `RandomForestRegressor` interno do zero (`clone(self.model)` por repetição em `GridSearch.execution()`), então o nº de features selecionadas pode variar naturalmente entre repetições. Isso é o dado que o orientador quer observar, por isso fica visível linha-a-linha no `_detail.csv`, sem agregação que esconda a variância. `lasso` (`LassoCV` com `TimeSeriesSplit` determinístico sobre os mesmos dados de treino) tende a ser estável entre repetições — a comparação entre a variância de `rf_embedded` e a estabilidade de `lasso` já é, por si, um resultado a discutir na dissertação.
+
 ---
 
 ## 2. O Arsenal de Algoritmos

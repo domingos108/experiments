@@ -104,6 +104,21 @@ def _load_pkl(path: Path) -> list:
     return data if isinstance(data, list) else [data]
 
 
+def _unwrap_entry(entry):
+    """
+    Suporte a dois formatos possíveis de item dentro do .pkl:
+        1) dict {'experiment': ResultExp/Additive/SKlearnModel, 'val_metric': float}  ← padrão GridSearch
+        2) ResultExp/Additive/SKlearnModel diretamente                                  ← salvamento simples
+
+    Retorna (result_exp, val_metric) -- val_metric é None quando o formato 2 é usado.
+    Compartilhado por export_metrics_to_csv.py e export_selected_features.py, que leem
+    os mesmos .pkl com extrações diferentes.
+    """
+    if isinstance(entry, dict) and "experiment" in entry:
+        return entry["experiment"], entry.get("val_metric")
+    return entry, None
+
+
 def extract_rows(pkl_path: Path) -> list[dict]:
     """
     Lê um .pkl e retorna uma lista de dicionários (uma linha por repetição).
@@ -127,15 +142,7 @@ def extract_rows(pkl_path: Path) -> list[dict]:
 
     for repetition_idx, entry in enumerate(entries):
         try:
-            # Suporte a dois formatos possíveis:
-            #   1) dict {'experiment': ResultExp, 'val_metric': float}   ← padrão GridSearch
-            #   2) ResultExp diretamente                                  ← salvamento simples
-            if isinstance(entry, dict) and "experiment" in entry:
-                result_exp = entry["experiment"]
-                val_metric = entry.get("val_metric")
-            else:
-                result_exp = entry
-                val_metric = None
+            result_exp, val_metric = _unwrap_entry(entry)
 
             test_metrics: dict = result_exp.metrics_results.get("test_metrics", {})
 
@@ -185,7 +192,7 @@ def collect_all_rows(result_dir: Path) -> pd.DataFrame:
         all_rows.extend(rows)
         label = pkl_path.relative_to(result_dir)
         status = f"{len(rows)} linha(s)" if rows else "ignorado"
-        print(f"  ✓  {label}  →  {status}")
+        print(f"  OK  {label}  ->  {status}")
 
     if not all_rows:
         return pd.DataFrame()
@@ -283,6 +290,41 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def run_export_metrics_to_csv(result_dir: Path, output: Path, detail: bool = False) -> pd.DataFrame:
+    """
+    Nucleo reutilizavel por baixo do `main()` (CLI) e de chamada direta em
+    notebook (Tarefa 3.2) -- a mesma funcao alimenta os dois pontos de
+    entrada, garantindo que o CSV escrito em disco seja identico entre eles
+    quando a extracao tem sucesso. Erros (result_dir ausente) se manifestam
+    diferente em cada ponto de entrada por design: main() traduz para
+    sys.exit(1) com mensagem amigavel; uma chamada direta em notebook deixa
+    o FileNotFoundError propagar como traceback normal do Jupyter.
+
+    Ao contrario de `main()`, nunca chama `sys.exit()` -- levanta
+    `FileNotFoundError` se `result_dir` nao existir, e retorna um DataFrame
+    vazio (sem escrever nada) se nenhuma metrica for extraida, para nao
+    interromper um kernel Jupyter.
+    """
+    if not result_dir.exists():
+        raise FileNotFoundError(f"Diretório de resultados não encontrado: {result_dir}")
+
+    df_detail = collect_all_rows(result_dir)
+
+    if df_detail.empty:
+        print("[INFO] Nenhuma métrica extraída. Verifique se os .pkl foram gerados.")
+        return pd.DataFrame()
+
+    df_mean = aggregate_mean(df_detail)
+
+    save_csv(df_mean, output, label="CSV agregado (média das repetições)")
+
+    if detail:
+        detail_path = output.with_name(output.stem + "_detail" + output.suffix)
+        save_csv(df_detail, detail_path, label="CSV detalhado (por repetição)")
+
+    return df_mean
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args   = parser.parse_args(argv)
@@ -290,27 +332,18 @@ def main(argv: list[str] | None = None) -> None:
     result_dir: Path = args.result_dir.resolve()
     output:     Path = args.output.resolve()
 
-    # ---- Validação do diretório ----
+    # Verificado aqui (não dentro de um try/except em torno de todo o
+    # pipeline) para não confundir um FileNotFoundError não relacionado
+    # (ex. vindo de save_csv por outro motivo) com "diretório não existe" --
+    # achado de code-review da Tarefa 3.2.
     if not result_dir.exists():
         print(f"[ERRO] Diretório de resultados não encontrado: {result_dir}")
         sys.exit(1)
 
-    # ---- Coleta ----
-    df_detail = collect_all_rows(result_dir)
+    df_mean = run_export_metrics_to_csv(result_dir, output, detail=args.detail)
 
-    if df_detail.empty:
-        print("[INFO] Nenhuma métrica extraída. Verifique se os .pkl foram gerados.")
+    if df_mean.empty:
         sys.exit(0)
-
-    # ---- Agregação ----
-    df_mean = aggregate_mean(df_detail)
-
-    # ---- Salvamento ----
-    save_csv(df_mean, output, label="CSV agregado (média das repetições)")
-
-    if args.detail:
-        detail_path = output.with_name(output.stem + "_detail" + output.suffix)
-        save_csv(df_detail, detail_path, label="CSV detalhado (por repetição)")
 
     # ---- Prévia no terminal ----
     preview_cols = ["ExperimentID", "Serie", "Modelo", "N_Repeticoes",

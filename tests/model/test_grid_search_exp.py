@@ -4,10 +4,25 @@ Teste do fallback aditivo `fs_lag_size` descrito no PLANO_ARQUITETURA.md
 hoje quando a serie nao tem `fs_lag_size` definido em BASE_INFORMATION (os 5
 baselines da Secao 3 do CLAUDE.md nao podem mudar de comportamento), e deve
 usar o valor de `fs_lag_size` quando presente.
+
+Tarefa 3.1 (PLANO_ARQUITETURA.md Secao 1.5): a chave `fs_lag_size` foi
+REMOVIDA de BASE_INFORMATION para as 4 series de FS_DEV_SERIES (decisao do
+orientador -- nao mais um valor profundo manual por serie). O mecanismo de
+fallback em si (resolve_lag_size) nao mudou; o que mudou e que agora nenhuma
+serie usa o ramo `fs_lag_size`, entao as 4 series de FS_DEV_SERIES caem no
+mesmo `lag_size='auto'` do baseline -- por isso TestFsDevSeriesDfTrainParity
+prova, com dados reais, que o df_train resultante e identico ao do baseline
+sem seletor.
 """
 
+import numpy as np
+import pandas as pd
+import pytest
+
 import config
+from input.input import open_format_train_val_test
 from model.grid_search_exp import resolve_lag_size
+from tests.model.conftest import FS_DEV_SERIES
 
 
 class TestResolveLagSizeRegression:
@@ -23,17 +38,16 @@ class TestResolveLagSizeRegression:
                 continue
             assert resolve_lag_size(base_info) == base_info["lag_size"]
 
-    def test_fs_lag_size_series_resolve_to_the_deliberately_configured_value(self):
-        """As 4 series de FS_DEV_SERIES tem fs_lag_size definido (Tarefas 2 e
-        3 do PLANO_ARQUITETURA.md). Trava os valores exatos para que uma
-        mudanca futura em config.py seja intencional e visivel, nao
-        silenciosa. Valores calculados a partir do pipeline real -- ver
-        pre-checks das Tarefas 2 e 3 (df_train resultante medido, nao
-        estimado)."""
-        assert resolve_lag_size(config.BASE_INFORMATION["sunspot.txt"]) == 30
-        assert resolve_lag_size(config.BASE_INFORMATION["airlines.txt"]) == 20
-        assert resolve_lag_size(config.BASE_INFORMATION["austres.txt"]) == 12
-        assert resolve_lag_size(config.BASE_INFORMATION["coloradoRiver.txt"]) == 30
+    @pytest.mark.parametrize("series_name", FS_DEV_SERIES)
+    def test_fs_dev_series_have_no_fs_lag_size_key_after_reversal(self, series_name):
+        """Tarefa 3.1: a chave fs_lag_size foi removida (nao substituida por
+        um literal 'auto') para as 4 series de FS_DEV_SERIES -- resolve_lag_size
+        deve cair no fallback por AUSENCIA da chave, nao por coincidencia de
+        valor. Trava isso para que uma reintroducao futura de fs_lag_size
+        seja intencional e visivel, nao silenciosa."""
+        base_info = config.BASE_INFORMATION[f"{series_name}.txt"]
+        assert "fs_lag_size" not in base_info
+        assert resolve_lag_size(base_info) == base_info["lag_size"] == "auto"
 
 
 class TestResolveLagSizeFallbackActive:
@@ -54,3 +68,38 @@ class TestResolveLagSizeFallbackActive:
         base_info = {"freq": "YE", "m": 1, "fs_lag_size": 30}
 
         assert resolve_lag_size(base_info) == 30
+
+
+class TestFsDevSeriesDfTrainParity:
+    """Prova de regressao pedida explicitamente na Tarefa 3.1: com a chave
+    fs_lag_size removida (fallback ativo), o df_train resultante para as 4
+    series de FS_DEV_SERIES precisa ser IDENTICO ao do baseline sem seletor
+    (lag_size='auto' direto, sem passar por resolve_lag_size). Usa dados
+    reais via input.open_format_train_val_test -- mesma funcao usada em
+    producao por Additive/SKlearnModel -- nao dados sinteticos."""
+
+    def _open_with_lag_size(self, series_name, lag_size):
+        base_name = f"{series_name}.txt"
+        exec_config = {
+            "test_size": config.TEST_SIZE,
+            "val_size": config.VAL_SIZE,
+            "horizon": 1,
+            "lag_size": lag_size,
+            "diff_kpss": False,
+            "normalize": False,
+            "type_filter": None,
+        }
+        return open_format_train_val_test(base_name, exec_config)
+
+    @pytest.mark.parametrize("series_name", FS_DEV_SERIES)
+    def test_df_train_matches_baseline_exactly(self, series_name):
+        base_name = f"{series_name}.txt"
+        resolved_lag_size = resolve_lag_size(config.BASE_INFORMATION[base_name])
+
+        fs_path_result = self._open_with_lag_size(series_name, resolved_lag_size)
+        baseline_result = self._open_with_lag_size(series_name, "auto")
+
+        pd.testing.assert_frame_equal(fs_path_result.df_train, baseline_result.df_train)
+        pd.testing.assert_frame_equal(fs_path_result.df_val, baseline_result.df_val)
+        pd.testing.assert_frame_equal(fs_path_result.df_test, baseline_result.df_test)
+        assert fs_path_result.lag_size_formated == baseline_result.lag_size_formated
