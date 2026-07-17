@@ -1,0 +1,24 @@
+{
+  "experiment_id": "chamados_v4_fs_lasso",
+  "notebook": "notebook/residual_hydridsystem/arima_mlp_lasso.ipynb",
+  "hibrido": "ARIMA-MLP (Additive)",
+  "linear_model_name": "1arima",
+  "feature_selection": {
+    "strategy": "lasso",
+    "model_name_suffix": "lasso",
+    "cv": "TimeSeriesSplit(n_splits=3) -- nunca KFold aleatorio",
+    "selection_mechanism": "SelectFromModel(LassoCV(cv=TimeSeriesSplit(3)), threshold=None) -- sklearn resolve threshold=None para 1e-5 quando detecta 'Lasso' no nome da classe do estimador (mantem qualquer coeficiente nao zerado pela esparsidade L1). Numero de features NAO e mais um hiperparametro k de grid search (revertido na Tarefa 3.1, PLANO_ARQUITETURA.md Secao 1.5) -- emerge do proprio ajuste L1, tende a ser estavel entre as 10 repeticoes de model_exec (LassoCV e determinístico dado o mesmo X_train/y_train)."
+  },
+  "estimator_grid": {
+    "hidden_layer_sizes": [10, 20, 50],
+    "max_iter": [1000]
+  },
+  "model_exec": 10,
+  "series": [
+    {"nome": "airlines.txt", "lag_size_auto_resolved": 20},
+    {"nome": "austres.txt", "lag_size_auto_resolved": 1},
+    {"nome": "coloradoRiver.txt", "lag_size_auto_resolved": 16},
+    {"nome": "sunspot.txt", "lag_size_auto_resolved": 9}
+  ],
+  "nota": "Template preparado na Tarefa 3.1 (PLANO_ARQUITETURA.md Secao 1.5) -- supersede chamados_v3_fs_lasso (nunca executado, usava top-k uniforme). fs_lag_size foi REMOVIDA de config.py; lag_size_auto_resolved acima e o valor real medido via PACF (get_max_lag_to_consider), identico ao baseline, so para referencia -- nao e mais uma chave de config.py. ALERTA: austres.txt resolve para 1 lag candidato (amostra pequena, N=89) -- praticamente nao ha espaco de selecao de features nessa serie, avaliar antes de comparar metodos para ela. rodar via RUNBOOK.md. metrics.csv/metrics_detail.csv/selected_features.csv aparecem nesta pasta apos a execucao manual."
+}
