@@ -6,13 +6,38 @@ from sklearn.metrics import mean_squared_error
 from scipy.spatial.distance import pdist, squareform
 from sklearn.exceptions import ConvergenceWarning
 
+def calcular_sigma_deb(pop_size, n_dims, limites_min=-1, limites_max=1):
+    """
+    Calcula o sigma_share ideal usando a heurística de Deb.
+    
+    Parâmetros:
+    - pop_size: Número de indivíduos na população (N)
+    - n_dims: Número de genes/features (k)
+    - limites_min/max: Intervalos das features (podem ser escalares ou arrays)
+    """
+    
+    # 1. Calcular a distância máxima teórica (D_max) no hipercubo
+    # Se os limites forem diferentes para cada dimensão, usamos a norma da diferença
+    diff = np.array(limites_max) - np.array(limites_min)
+    d_max = np.sqrt(np.sum(diff**2))
+    
+    # 2. Aplicar a fórmula de Deb
+    # Raiz k-ésima de N
+    raiz_k_n = pop_size ** (1.0 / n_dims)
+    
+    sigma_share = d_max / (2 * raiz_k_n)
+    
+    return sigma_share
+
 class PSOMlpRegressor(BaseEstimator, RegressorMixin):
     def __init__(self, 
                  pop_size=30, n_gen=100, n_epocas_ft=50,
                  hidden_layer_sizes=(20,), activation='logistic',
                  w_max=0.9, w_min=0.4, c1=2.0, c2=2.0,
-                 use_fitness_sharing=True, sigma_share=0.07, alpha=1.0,
+                 use_fitness_sharing=True, use_fine_tuning=True,
+                 sigma_share='auto', alpha=1.0,
                  random_state=None):
+        
         self.pop_size = pop_size
         self.n_gen = n_gen
         self.n_epocas_ft = n_epocas_ft
@@ -23,9 +48,11 @@ class PSOMlpRegressor(BaseEstimator, RegressorMixin):
         self.c1 = c1
         self.c2 = c2
         self.use_fitness_sharing = use_fitness_sharing
+        self.use_fine_tuning = use_fine_tuning
         self.sigma_share = sigma_share
         self.alpha = alpha
         self.random_state = random_state
+        self.mlp_solver = 'lbfgs'
         
         # O modelo final treinado
         self.best_model_ = None
@@ -72,6 +99,7 @@ class PSOMlpRegressor(BaseEstimator, RegressorMixin):
         return mean_squared_error(y, preds)
 
     def fit(self, X, y):
+        
         rng = np.random.default_rng(self.random_state)
         X = np.array(X)
         y = y.ravel()
@@ -104,10 +132,12 @@ class PSOMlpRegressor(BaseEstimator, RegressorMixin):
             # Fitness Sharing
             if self.use_fitness_sharing:
                 # Matriz de distâncias euclidianas entre todos os indivíduos
-                dist_matrix = squareform(pdist(pop))
+                dist_matrix = squareform(pdist(pop, metric = 'euclidean'))
+                sigma_share = np.mean(dist_matrix)
                 # m_i = soma das funções de compartilhamento na vizinhança
-                sharing_matrix = 1 - (dist_matrix / self.sigma_share) ** self.alpha
-                sharing_matrix[dist_matrix >= self.sigma_share] = 0
+                sharing_matrix = 1 - (dist_matrix / sigma_share) ** self.alpha
+                sharing_matrix[dist_matrix >= sigma_share] = 0
+                
                 m_i = np.sum(sharing_matrix, axis=1)
                 losses_calc = losses_brutos * m_i
             else:
@@ -137,7 +167,7 @@ class PSOMlpRegressor(BaseEstimator, RegressorMixin):
         for individual in pbest_pos:
             model_ft = MLPRegressor(hidden_layer_sizes=self.hidden_layer_sizes,
                                     activation=self.activation,
-                                    solver='lbfgs',
+                                    solver=self.mlp_solver,
                                     max_iter=self.n_epocas_ft,
                                     random_state=self.random_state)
             
@@ -146,10 +176,10 @@ class PSOMlpRegressor(BaseEstimator, RegressorMixin):
                 model_ft.fit(X[:2], y[:2]) # Dummy fit
             
             self._set_weights(model_ft, individual)
-            
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=ConvergenceWarning)
-                model_ft.fit(X, y)
+            if self.use_fine_tuning:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=ConvergenceWarning)
+                    model_ft.fit(X, y)
             
             # Avaliação final pós-FT
             final_mse = mean_squared_error(y, model_ft.predict(X))

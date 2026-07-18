@@ -15,7 +15,9 @@ MODEL_DATA_PATH = ROOT_PATH + '/data/result/'
 
 TEST_SIZE = 0.1
 VAL_SIZE = 0.1
-
+# bases de dados que estão disponíveis na pasta data/raw,
+# serão executadas pelos modelos de previsão, 
+# e os resultados serão salvos na pasta data/result baseado no experimental_id   
 BASE_NAME_LIST = [
     #'majaboataosamu.txt',
     #'maolindasamu.txt',
@@ -34,13 +36,14 @@ BASE_NAME_LIST = [
     #'irradiancesp.txt',
 
     #'coloradoRiver.txt', 
-    #'sunspot.txt',
+   # "lakeerie",
+    ##'sunspot.txt',
     #'milk.txt', 
     #'Unemployment.txt',
     #'ausbee.txt',
-    #'austres.txt',
-    #'heartrate.txt',
-    #"ozon.txt",
+    ##'austres.txt',
+    ##'heartrate.txt',
+    ##"ozon.txt",
     #"pollution.txt",
     #"redwine.txt",
     #"gasoline.txt",
@@ -65,7 +68,7 @@ BASE_NAME_LIST = [
     #'irradiancepicospi.txt', 
     #'irradiancevalencapiaui.txt' 
 
-    #'windspeedcampinagrandehour.txt',
+    'windspeedcampinagrandehour.txt',
     'windspeedcaruaruhour.txt',
     'windspeedcastelodopiauihour.txt', 
     'windspeedmaceiohour.txt' ,
@@ -73,9 +76,10 @@ BASE_NAME_LIST = [
 
 ]
 
+#deprecated
 LAG_SIZE_LIST = []
 
-
+# configurações de frequência, sazonalidade e tamanho do lag para cada base de dados
 BASE_INFORMATION = {
     'windspeedcampinagrandehour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
     'windspeedcaruaruhour.txt': {"freq": "D", 'm': 1, 'lag_size': 24}, 
@@ -126,7 +130,7 @@ BASE_INFORMATION = {
     "temperature.txt": {"freq": "MS", 'm': 1, 'lag_size': 'auto'  }, 
     "woolyrnq.txt": {"freq": "QE", 'm': 4, 'lag_size': 'auto'  }, 
     "melbmin.txt": {"freq": "D", 'm': 1, 'lag_size': 'auto'  }, 
-
+    "lakeerie":  {"freq": "M", 'm': 1, 'lag_size': 'auto'  }, 
     'consumocoformated.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  },
     'consumoneformated.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  },
     'consumonoformated.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  },

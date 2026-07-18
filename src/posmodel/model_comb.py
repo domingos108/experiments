@@ -62,30 +62,37 @@ def import_exec_models(fold, modelo_list, exec_config):
             execs_models = glob.glob(f'{fold}*_{model_name}.*')
             
             for pth in execs_models:
-                serie_name = pth.split('/')[-1].split('_')[0]
-                exec_pkl = generics.open_saved_result(pth)
-                lag_size = config.BASE_INFORMATION[f'{serie_name}.txt']['lag_size']
-                exec_atual = exec_config.copy()
-                exec_atual['lag_size'] = lag_size
-                base_info = input.open_format_train_val_test(
-                    serie_name+'.txt',  exec_atual)
-                
-                for i, em in enumerate(exec_pkl):
-                    prevs = pd.Series(em['experiment'].metrics_results['train_predict']).to_list()+\
-                            pd.Series(em['experiment'].metrics_results['val_predict']).to_list() +\
-                            pd.Series(em['experiment'].metrics_results['test_predict']).to_list()
-                    to_fill =  [None] * (len(base_info.original_ts) - len(prevs))
+                try:
+                    serie_name = pth.split('/')[-1].split('_')[0]
+                    exec_pkl = generics.open_saved_result(pth)
+                    lag_size = config.BASE_INFORMATION[f'{serie_name}.txt']['lag_size']
+                    exec_atual = exec_config.copy()
+                    exec_atual['lag_size'] = lag_size
+                    base_info = input.open_format_train_val_test(
+                        serie_name+'.txt',  exec_atual)
                     
-                    actual_exec = pd.DataFrame({
-                        'prev': to_fill + prevs,
-                        'model_name': model_name,
-                        'serie_name': serie_name,
-                        'real':  base_info.original_ts,
-                        'exec': i
-                    
-                    }
-                    )
-                    predict_results.append(actual_exec.reset_index())
+                    for i, em in enumerate(exec_pkl):
+                        #prevs = pd.Series(em['experiment'].metrics_results['train_predict']).to_list()+\
+                        #        pd.Series(em['experiment'].metrics_results['val_predict']).to_list() +\
+                        #        pd.Series(em['experiment'].metrics_results['test_predict']).to_list()
+                        prevs = pd.Series(em['experiment'].metrics_results['val_predict']).to_list() +\
+                                pd.Series(em['experiment'].metrics_results['test_predict']).to_list()
+                        
+                        prevs = [None if abs(p)==np.inf else p for p in prevs]
+                        to_fill =  [None] * (len(base_info.original_ts) - len(prevs))
+                        
+                        actual_exec = pd.DataFrame({
+                            'prev': to_fill + prevs,
+                            'model_name': model_name,
+                            'serie_name': serie_name,
+                            'real':  base_info.original_ts,
+                            'exec': i
+                        
+                        }
+                        )
+                        predict_results.append(actual_exec.reset_index())
+                except:
+                    import ipdb;ipdb.set_trace()
 
     return pd.concat(predict_results)
 
@@ -337,7 +344,7 @@ def exec_ensemble(experiment_id, modelo_list, ens_type, ds_args={},  horizon=1):
     fold, title = generics.format_names(experiment_id, '', '')
     if len(modelo_list)>1: #heterogeneus
         predict_results = import_exec_models(fold, modelo_list, exec_config)
-        model_name = f'comb{ens_type}'
+        model_name = f'{horizon}comb{ens_type}'
         model_base = 'hm'
     else: #homogeneus
         predict_results = import_bagging(fold, modelo_list, exec_config)

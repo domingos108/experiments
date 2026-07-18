@@ -27,10 +27,10 @@ def input_linear_info(experiment_id, base_name, experiment_params):
         "test_size": experiment_params['test_size'],
         "val_size": experiment_params['val_size'],
         "horizon": experiment_params['horizon'],
-         'lag_size': experiment_params['lag_size'],
-         'diff_kpss': experiment_params['diff_kpss'],
-         'normalize': False,
-         'type_filter': None
+        'lag_size': experiment_params['lag_size'],
+        'diff_kpss': experiment_params['diff_kpss'],
+        'normalize': False,
+        'type_filter': None
 
     }   
  
@@ -560,3 +560,114 @@ class ResidualCombination:
             predict_results.append({'experiment': model_exp_test, 'val_metric': np.inf})
 
         generics.save_result(fold, title, predict_results)
+
+
+class AdditiveValidFits:
+    def __init__(self, 
+                 model,
+                 experiment_id, 
+                 base_name, 
+                 model_name, 
+                 force=True,
+                 normalize = True,
+                 experiment_params = {} 
+
+        ):
+        self.model = model
+        self.experiment_id = experiment_id
+        self.base_name = base_name
+        self.model_name = model_name
+        self.experiment_params = experiment_params
+        self.force = force
+        self.normalize = normalize
+
+    def fit_predict(self):
+        linear_fold, linear_title = generics.format_names(
+                self.experiment_id, 
+                self.base_name, 
+                self.experiment_params['linear_model_name']
+        )
+
+        exec_config = {
+            "test_size": self.experiment_params['test_size'],
+            "val_size": self.experiment_params['val_size'],
+            "horizon": self.experiment_params['horizon'],
+            'lag_size': self.experiment_params['lag_size'],
+            'diff_kpss': self.experiment_params['diff_kpss'],
+            'normalize': False,
+            'type_filter': None
+
+        }   
+        
+        base_info = input.open_format_train_val_test( self.base_name, exec_config)
+        pn = generics.open_saved_result(linear_title)[0]['experiment']
+        test_size = base_info.test_size
+        val_size = base_info.val_size
+        original_ts = base_info.original_ts
+
+        df_train = pd.DataFrame()
+        df_val = pd.DataFrame()
+        df_test = pd.DataFrame()
+
+        for i, c in enumerate(pn.error_series.columns):
+            ts_actual = pn.error_series[c]
+            df_windowed = input.create_windowing(
+                pd.DataFrame({'y': ts_actual.values}), 
+                base_info.lag_size_formated+(exec_config['horizon']-1)
+            )
+            df_train = pd.concat([df_train, df_windowed.iloc[0:-(test_size+val_size)] ], axis=0)
+            df_val = pd.concat([df_val, df_windowed.iloc[-(test_size+val_size): -test_size]], axis=0)
+            if i==0: # only best arima
+                df_test = df_windowed.copy()
+
+        df_train = df_train.reset_index(drop=True)
+        df_val = df_val.reset_index(drop=True)
+        df_test= df_test.reset_index(drop=True)
+        insample_data = pd.concat([df_train, df_val])
+
+        min_max_scaler_x = preprocessing.MinMaxScaler()
+        min_max_scaler_x.fit(insample_data.drop(columns='actual'))
+
+        min_max_scaler_y = preprocessing.MinMaxScaler()
+        min_max_scaler_y.fit(insample_data['actual'].values.reshape(-1, 1))
+
+        y_train = min_max_scaler_y.transform(df_train['actual'].values.reshape(-1, 1))
+        x_train = min_max_scaler_x.transform(df_train.drop(columns=['actual']))
+
+        x_val = min_max_scaler_x.transform(df_val.drop(columns=['actual']))
+
+        x_test = min_max_scaler_x.transform(df_test.drop(columns=['actual']))
+        (
+            train_predict, 
+            val_predict, 
+            test_predict,
+            time_exec
+        ) = generics.fit_predict_ml_schemma(self.model, x_train, y_train, x_val, x_test)
+
+        all_residual_forecasts = min_max_scaler_y.inverse_transform(test_predict.reshape(-1, 1)).flatten()
+        
+        linear_forecast = pn.df_prevs[pn.df_prevs.columns[0]]
+        final_forecast = linear_forecast[base_info.lag_size_formated:] + all_residual_forecasts 
+
+        test_predict = final_forecast[-test_size:]   
+        train_predict = final_forecast[0:-(test_size+val_size)]
+        if x_val.shape[0] > 0:
+            val_predict = final_forecast[-(test_size+val_size): -test_size]
+
+        test_metrics = metrics.gerenerate_metric_results(original_ts[-test_size:], test_predict)
+
+        if val_size!=None and val_size>0:
+            val_metrics = metrics.gerenerate_metric_results(original_ts[-(test_size+val_size): -test_size], val_predict)
+        else:
+            val_metrics = None
+
+        self.metrics_results = {
+            'train_predict': train_predict, 
+            'val_predict': val_predict, 
+            'test_predict':test_predict,
+            'val_metrics': val_metrics,
+            'test_metrics': test_metrics,
+            'time_exec': time_exec,
+            'linear_forecast': df_test['actual'].values[base_info.lag_size_formated:] ,
+            'nonlinear_forecast': all_residual_forecasts
+        }

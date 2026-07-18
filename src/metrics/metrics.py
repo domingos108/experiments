@@ -185,43 +185,48 @@ def open_fold_result(experiment_id,  group_metrics_name = 'val_metrics', metric 
     df_prevs = pd.DataFrame()
 
     for pth in glob(fold+'*'):
-        model_name = pth.split('_')[-1].split('.pk')[0]
-        serie_name = pth.split('/')[-1].split('_')[0]
+        try:
+            model_name = pth.split('_')[-1].split('.pk')[0]
+            serie_name = pth.split('/')[-1].split('_')[0]
+
+            exec_pkl = generics.open_saved_result(pth)
+
+            for p in exec_pkl:
+                p['experiment'].model = None
+
+            exec_model.append(exec_pkl)
+
+            all_metrics = []
+
+            for experiment in exec_pkl:
+                if normalize:
+                    experiment['experiment'].metrics_results = normalize_results(experiment['experiment'], serie_name)
+
+                ep = experiment['experiment'].metrics_results
+                dict_temp = ep['test_metrics']
+                test_timing = ep['time_exec']['testing'] if ep['time_exec'] else np.inf
+                training__time = ep['time_exec']['training'] if ep['time_exec'] else np.inf
+                best_metric = experiment['val_metric'] if experiment['val_metric']  else np.inf
+
+                dict_temp['val_metric'] = best_metric
+                dict_temp['time_testing'] = test_timing
+                dict_temp['time_training'] = training__time
+                all_metrics.append(dict_temp)
+            
+            df_metric = pd.DataFrame(all_metrics).fillna(-1).infer_objects(copy=False)
         
-        exec_pkl = generics.open_saved_result(pth)
+            df_metric['model'] = model_name
+            df_metric['ts'] = serie_name
+            
+            df_all_metrics = pd.concat([df_all_metrics, df_metric])
 
-        for p in exec_pkl:
-            p['experiment'].model = None
-
-        exec_model.append(exec_pkl)
-
-        all_metrics = []
-
-        for experiment in exec_pkl:
-            if normalize:
-                experiment['experiment'].metrics_results = normalize_results(experiment['experiment'], serie_name)
-
-            ep = experiment['experiment'].metrics_results
-            dict_temp = ep['test_metrics']
-            test_timing = ep['time_exec']['testing'] if  ep['time_exec']['testing'] else np.inf
-            training__time = ep['time_exec']['training'] if ep['time_exec']['training'] else np.inf
-            best_metric = experiment['val_metric'] if experiment['val_metric']  else np.inf
-
-            dict_temp['val_metric'] = best_metric
-            dict_temp['time_testing'] = test_timing
-            dict_temp['time_training'] = training__time
-            all_metrics.append(dict_temp)
-        
-        df_metric = pd.DataFrame(all_metrics)
-        df_metric['model'] = model_name
-        df_metric['ts'] = serie_name
-        
-        df_all_metrics = pd.concat([df_all_metrics, df_metric])
-
-        df_prevs = pd.concat([
-            df_prevs,
-            get_best_test_forecast(metric, exec_pkl, model_name, serie_name)
-        ])
+            df_prevs = pd.concat([
+                df_prevs,
+                get_best_test_forecast(metric, exec_pkl, model_name, serie_name)
+            ])
+        except:
+            
+            pass
 
     df_mean_metrics = df_all_metrics.groupby(['ts', 'model']).mean()
     df_prevs = get_real_values(df_prevs)

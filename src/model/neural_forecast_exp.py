@@ -1,3 +1,4 @@
+import time
 import os
 import logging
 import warnings
@@ -39,6 +40,29 @@ class NeuralForecastExp:
         self.force = force
         self.normalize = normalize
 
+    def predict_steps(self, df_prev, fcst, model_name_fcst, current_train, shape_prevs):
+        test_prevs = []
+        start_time_test = time.time()
+
+        for i in range(df_prev.shape[0]):
+            # Prevemos o próximo ponto
+            # O Nixtla usa o final do DataFrame fornecido para gerar a previsão
+            forecast = fcst.predict(df=current_train)
+            test_prevs.append(forecast[model_name_fcst].iloc[self.experiment_params['horizon'] -1])
+            
+            # "Update": Adicionamos a linha real do teste ao DataFrame de treino
+            actual_row =  df_prev[['unique_id', 'ds', 'y']].iloc[[i]]
+            current_train = pd.concat([current_train, actual_row]).reset_index(drop=True)
+
+            # for multiple step forecasts
+            if shape_prevs == len(test_prevs):
+                break
+
+        end_time_test = time.time()
+
+        return test_prevs, end_time_test, start_time_test 
+
+    
     def fit_predict(self):
  
         lag_size_base = self.experiment_params['lag_size']
@@ -60,7 +84,7 @@ class NeuralForecastExp:
         )
         
         params = self.experiment_params['model_actual_config']
-        params['h'] = 1
+        params['h'] = self.experiment_params['horizon']
         params['random_seed'] = np.random.randint(0, 10000)
         params['input_size'] = base_info.lag_size_formated
         params['logger'] = False
@@ -83,34 +107,30 @@ class NeuralForecastExp:
             }
         )
 
-        df_training = df_ts.iloc[0: - (test_size + val_size)]
+        df_training = df_ts.iloc[0: - (test_size + val_size+ self.experiment_params['horizon']-1)]
 
-        df_prev = df_ts.iloc[- (test_size + val_size):]
-        
+        df_prev = df_ts.iloc[- (test_size + val_size + self.experiment_params['horizon']-1):]
+
+        start_time_training = time.time()
         fcst = NeuralForecast(models=[model_base], freq=freq)
         fcst.fit(df=df_training)
+        end_time_training = time.time()
 
-        test_prevs = []
-        current_train = df_training[['unique_id', 'ds', 'y']].copy()
+        model_name_fcst = [model.__class__.__name__ for model in fcst.models]
 
-        model_name = [model.__class__.__name__ for model in fcst.models]
-
-        if len(model_name) > 1:
+        if len(model_name_fcst) > 1:
             raise NotImplementedError("Multiplos modelos não implementado")
         
-        model_name = model_name[0]
-        train_predict = fcst.predict_insample(step_size=1)[model_name]
-        test_prevs = []
-        for i in range(df_prev.shape[0]):
-            # Prevemos o próximo ponto
-            # O Nixtla usa o final do DataFrame fornecido para gerar a previsão
-            forecast = fcst.predict(df=current_train)
-            test_prevs.append(forecast[model_name].iloc[params['h'] -1])
-            
-            # "Update": Adicionamos a linha real do teste ao DataFrame de treino
-            actual_row =  df_prev[['unique_id', 'ds', 'y']].iloc[[i]]
-            current_train = pd.concat([current_train, actual_row]).reset_index(drop=True)
+        model_name_fcst = model_name_fcst[0]
+        train_predict = fcst.predict_insample(step_size=1)[model_name_fcst]
 
+        current_train = df_training[['unique_id', 'ds', 'y']].copy()
+
+        shape_prevs = test_size + val_size
+        test_prevs, end_time_test, start_time_test = self.predict_steps(
+            df_prev, fcst, model_name_fcst, current_train, shape_prevs
+        )
+        
         if val_size>0:
             val_predict = test_prevs[0:-test_size]
         else:
@@ -145,6 +165,9 @@ class NeuralForecastExp:
             'test_predict':test_predict,
             'val_metrics': val_metrics,
             'test_metrics': test_metrics,
-            'time_exec': {'testing': None, 'training': None}
+            'time_exec': {
+                'testing': end_time_test - start_time_test, 
+                'training': end_time_training - start_time_training
+            }
         }
         
