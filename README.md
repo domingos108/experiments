@@ -9,7 +9,7 @@
 - pip install -r requirements.txt
 
 # Objetivo do projeto
-- motor para experimentação de modelos de séries temporais
+- motor para experimentação de modelos de séries temporais. **Podem existir módulos que ainda não estão completos, importante o estudo e adaptação do código para gerar os resultados corretos**.
 - Exemplos de Execução de modelos implementadas na pasta notebooks, exemplos:
     - notebook/single_models/arima_exec.ipynb
     - notebook/single_models/mlp_exec.ipynb
