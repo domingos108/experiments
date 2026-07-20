@@ -80,6 +80,34 @@ model_parameters = {
 
 O número de features selecionadas por `rf_embedded`/`lasso` passa a **variar por execução** (inclusive entre as `model_exec=10` repetições, para `rf_embedded` — RF usa `random_state=None` deliberadamente, para observar a variabilidade real). Isso fica registrado por série/repetição em `results/<experiment_id>/selected_features_detail.csv` (ver Seção 5 abaixo).
 
+## 2b. Histórico completo do Grid Search — erro de validação por combinação (Tarefa 3.4)
+
+Desde a Tarefa 3.4 (PLANO_ARQUITETURA.md Seção 1.6), `GridSearch` persiste **todas** as combinações testadas — não só a vencedora — numa chave nova e aditiva `grid_search_history`, dentro do mesmo `.pkl` de sempre (nenhum leitor existente muda de comportamento). Isso vale automaticamente para toda execução futura (`save_grid_history=True` por padrão); **não é retroativo** — `.pkl` gerados antes da Tarefa 3.4 (ex. `chamados_v4_fs_ftest`, achado da Tarefa 3.3) não têm essa chave e não são recuperáveis.
+
+Leitura (uma linha por combinação, pronta para plotar "erro de validação vs. hiperparâmetro"):
+
+```python
+from pathlib import Path
+from model.grid_search_exp import load_grid_search_history
+
+df = load_grid_search_history(Path('data/result/<experiment_id>/<serie>_<horizon><model_name>.pkl'))
+df = df.sort_values('selector__k')  # ou o hiperparametro que te interessa
+print(df[['selector__k', 'val_metric_mean', 'val_metric_std']])
+
+df.plot(x='selector__k', y='val_metric_mean', yerr='val_metric_std', marker='o', capsize=3)
+```
+
+Cada linha tem uma coluna por chave de `params` (ex. `selector__k`, `estimator__hidden_layer_sizes`) mais `val_metric_mean`/`val_metric_std`/`val_metric_reps` (as `model_exec` repetições internas cruas de RMSE daquela combinação, nunca métrica de teste — `GridSearch.group_metrics_name` é fixado como `'val_metrics'`) e `val_metrics_reps` (lista com o dict **completo** de validação por repetição — `MSE`/`RMSE`/`MAE`/`MAPE`/`theil`/`ARV`/`IA`/`POCID` — para quem quiser plotar por outra métrica além de RMSE, sem precisar re-rodar o grid). Exemplo real (grid `selector__k=[1,3,5,8]`, `airlines.txt`, `f_test`, rodada de demonstração — não um experimento oficial):
+
+| `selector__k` | `val_metric_mean` | `val_metric_std` |
+|---|---|---|
+| 1 | 14.99 | 0.0001 |
+| 3 | 14.30 | 0.0067 |
+| 5 | 14.34 | 0.0045 |
+| 8 | 14.54 | 0.0060 |
+
+Se `load_grid_search_history` levantar `ValueError`, o `.pkl` não tem o histórico (gerado com `save_grid_history=False`, antes da Tarefa 3.4, ou com `grid_search_history` presente mas vazio) — re-rode o Grid Search para capturá-lo.
+
 ## 3. Definir um novo `experiment_id`
 
 Regra (CLAUDE.md, Seção 3.2): **nome novo e explícito, nunca reaproveitar um `experiment_id` existente para uma configuração diferente.** Sem hash automático, sem validação de "config mudou" — a responsabilidade é sua.

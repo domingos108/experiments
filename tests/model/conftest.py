@@ -46,3 +46,52 @@ def fs_dev_series_train_data(request):
     """Parametrizada sobre as 4 series de FS_DEV_SERIES -- um teste que usa
     este fixture roda automaticamente uma vez por serie."""
     return load_fs_dev_series_train_data(request.param)
+
+
+class FakeModelExpValOnly:
+    """Test double de `model_class_exp` (compartilhado entre
+    test_grid_search_history.py e test_read_grid_search_history.py -- achado
+    de code-review da Tarefa 3.4, os dois arquivos tinham copias quase
+    identicas que ja haviam divergido). Nunca treina nada de verdade -- usa
+    o proprio parametro testado (`model.constant`) como RMSE de validacao,
+    com um `test_metrics` SENTINELA fixo e sempre DIFERENTE do valor de
+    validacao. Prova mecanica (nao estatistica) de que o historico do Grid
+    Search so pode vir de `val_metrics`."""
+
+    TEST_SENTINEL = 999999.0
+
+    def __init__(self, model, experiment_id, base_name, model_name, force, normalize, experiment_params):
+        self.model = model
+        self.metrics_results = None
+
+    def fit_predict(self):
+        val_rmse = float(self.model.constant)
+        self.metrics_results = {
+            "val_metrics": {"RMSE": val_rmse},
+            "test_metrics": {"RMSE": self.TEST_SENTINEL},
+        }
+
+
+def make_fake_grid_search(tmp_path, monkeypatch, model_parameters, model_exec=2, save_grid_history=True):
+    """Constroi (sem executar) um GridSearch de teste, usando
+    `FakeModelExpValOnly` sobre `DummyRegressor(strategy='constant')` --
+    chame `.execution()` no teste para rodar."""
+    from sklearn.dummy import DummyRegressor
+
+    from model import grid_search_exp
+
+    monkeypatch.setattr(config, "MODEL_DATA_PATH", str(tmp_path) + "/")
+
+    return grid_search_exp.GridSearch(
+        FakeModelExpValOnly,
+        DummyRegressor(strategy="constant", constant=0.0),
+        model_parameters,
+        "fake_experiment",
+        "airlines.txt",
+        "testmodel",
+        force=True,
+        normalize=True,
+        experiment_params={"horizon": 1, "diff_kpss": False},
+        model_exec=model_exec,
+        save_grid_history=save_grid_history,
+    )

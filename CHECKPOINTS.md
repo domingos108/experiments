@@ -5,9 +5,9 @@ chat, sem depender do histórico de conversa. Deve ser mantido atualizado a cada
 concluída (ou pausada) — é o complemento "estado atual" ao lado de CLAUDE.md (regras) e
 PLANO_ARQUITETURA.md (arquitetura/roadmap).
 
-**Última atualização:** 2026-07-17, ao final da Tarefa 3.2.
+**Última atualização:** 2026-07-17, ao final da Tarefa 3.4.
 **Branch/estado do Git no momento desta pausa:** `joao_lucas_experiments`. Working tree com
-mudanças das Tarefas 3.1 e 3.2 **não commitadas** (ver Seções 2 e 2b) — o commit `98eccef`
+mudanças das Tarefas 3.1 a 3.4 **não commitadas** (ver Seções 2, 2b e 2c) — o commit `98eccef`
 ("Runbook and checkpoints added") já continha o estado da Tarefa 3 completo; tudo abaixo dele
 é novo.
 
@@ -24,6 +24,8 @@ mudanças das Tarefas 3.1 e 3.2 **não commitadas** (ver Seções 2 e 2b) — o 
 | 3 | `rf_embedded`/`lasso` (top-k uniforme) + 4 notebooks dedicados | ✅ Concluída, **nada executado** | `experiment_id` propostos `chamados_v3_fs_*` — **superados pela Tarefa 3.1**, nunca executados |
 | 3.1 | Reversão p/ `SelectFromModel` nativo + registro de features + comparação lado a lado | ✅ Concluída, **nada executado ainda** | Ver Seção 2 abaixo — código/testes/docs prontos, execução real fica para a próxima sessão |
 | 3.2 | Fluxo notebook-only (Run All, sem terminal) + investigação PACF `austres.txt` | ✅ Concluída, **nada executado ainda** | Ver Seção 2b abaixo — 4 notebooks reestruturados (7 células), `notebook/compare_fs_results.ipynb` novo, `src/utils/copy_pretrained_linear_model.py` novo |
+| 3.3 | Diagnóstico: `compare_fs_results.ipynb` corrompido? Grid de `k` ampliado foi avaliado de verdade? | ✅ Concluída (só investigação, sem correção) | **Notebook NÃO estava corrompido** (JSON bruto validado + rodado via papermill, sem erro) — corrupção relatada não reproduzida. **Histórico completo do grid confirmado como não-persistido** (`_search_params()` descarta tudo exceto o vencedor) — motivou a Tarefa 3.4 |
+| 3.4 | Persistir histórico completo do Grid Search (combinação × erro de validação) | ✅ Concluída, **nada executado em experimento real ainda** | Ver Seção 2c abaixo — `grid_search_history` no `.pkl`, `load_grid_search_history()`, 1 bug real corrigido via code-review |
 
 ---
 
@@ -136,6 +138,49 @@ explícita do RUNBOOK.md, não por trava de código.
 + `run_export_metrics_to_csv`/`run_export_selected_features`); hashes/mtimes dos 5 baselines
 continuam intocados; todos os 5 notebooks (4 FS + `compare_fs_results.ipynb`) validados via
 `nbformat`; nenhum notebook foi executado automaticamente nesta sessão.
+
+---
+
+## 2c. O que a Tarefa 3.3 (diagnóstico) e 3.4 entregaram (não commitado ainda)
+
+**Tarefa 3.3 — só investigação, sem código escrito:**
+- `notebook/compare_fs_results.ipynb` foi verificado byte-a-byte (JSON bruto) e executado via
+  papermill — **não estava corrompido**. O `NameError: name 'null' is not defined` relatado não
+  foi reproduzido; hipótese mais provável é um estado transitório no kernel Jupyter (algo colado/
+  executado ao vivo, não salvo em disco).
+- Confirmado na fonte (`src/model/grid_search_exp.py:70-113`, versão pré-3.4):
+  `_search_params()` já calculava, por combinação do grid, a média das repetições internas de
+  validação — mas guardava tudo em variáveis locais e retornava só o argmin. Extraí do `.pkl` já
+  executado e do `print(best_params)` salvo nas saídas do notebook os vencedores reais
+  (`airlines: k=5`, `coloradoRiver: k=9`), mas **não havia como provar** que `k=15`/`k=20` foram
+  genuinamente avaliados — essa limitação motivou a Tarefa 3.4.
+
+**Tarefa 3.4 — instrumentação de `GridSearch` (após brainstorming, Seção 5.1 do CLAUDE.md):**
+- `GridSearch` ganhou `save_grid_history=True` (padrão) e passa a persistir **todas** as
+  combinações testadas — não só a vencedora — numa chave nova `grid_search_history` dentro do
+  MESMO `.pkl` (mudança estritamente aditiva; nenhum leitor existente muda de comportamento,
+  provado por teste de regressão lendo os `.pkl` reais dos 5 baselines).
+- Cada entrada: `{'params', 'val_metric_mean', 'val_metric_std', 'val_metric_reps',
+  'val_metrics_reps'}` — o último captura o dict **completo** de métricas de validação por
+  repetição (não só RMSE), achado de code-review (já estava em memória, custo zero).
+- `load_grid_search_history()` — leitor que vira um DataFrame (uma linha por combinação),
+  pronto para `df.plot(x=..., y='val_metric_mean', yerr='val_metric_std')`. Mora em
+  `src/model/grid_search_exp.py` (não `src/utils/`), colocado com quem produz o formato —
+  ajustado após code-review apontar o precedente de `metrics.open_fold_result`.
+- **Bug real encontrado e corrigido pelo code-review**: para `model_class_exp` não-sklearn
+  (LSTM/NBEATS/ELM/SCN/etc., via `neural_forecast_exp.py`/`perturbative_neural_forecast.py`),
+  o dict de hiperparâmetros é mutado in-place pelo wrapper (`random_seed`, `input_size`, etc.
+  injetados) — sem a correção, o histórico persistido capturaria essa poluição em vez dos
+  hiperparâmetros reais do grid. Não afeta os 5 baselines nem os notebooks de FS (usam
+  `Pipeline` sklearn, imunes a essa mutação), mas era um bug genuíno na feature nova.
+- **Limitação aceita, não contornada**: o histórico de `chamados_v4_fs_ftest` (rodado antes
+  desta instrumentação) não é recuperável — só existiu como variável local numa execução já
+  finalizada. Vale só para rodadas futuras.
+
+**Verificação final:** 106/106 testes passando; hashes/mtimes dos 5 baselines continuam
+intocados; prova de conceito real (não sintética) rodada — grid `selector__k=[1,3,5,8]` em
+`airlines.txt`/`f_test` via `Additive` real, produzindo o gráfico clássico "erro de validação
+vs. k" com barras de erro. Nenhum experimento real (`chamados_v4_fs_*`) foi re-executado.
 
 ---
 
