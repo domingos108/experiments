@@ -34,17 +34,23 @@ def _select_via_embedded_threshold(estimator, X, y):
     problema por construcao (limiar 'mean' usa comparacao `>=`, entao
     importancias todas zero ainda selecionam todas as features -- nunca
     zero), mas o fallback e aplicado uniformemente por simplicidade e para
-    nao depender de uma garantia implicita do sklearn."""
+    nao depender de uma garantia implicita do sklearn.
+
+    Retorna (selected_indices, fallback_triggered) -- Tarefa 3.6: o segundo
+    valor expoe se a selecao final veio do corte normal de SelectFromModel
+    ou deste fallback, distincao necessaria para nao confundir "sem sinal
+    detectado" com "selecao genuina concentrada em 1 feature"."""
     selector = SelectFromModel(estimator, threshold=None)
     selector.fit(X, y)
     selected = np.where(selector.get_support())[0]
-    if selected.size == 0:
+    fallback_triggered = selected.size == 0
+    if fallback_triggered:
         fitted = selector.estimator_
         raw_scores = getattr(fitted, "feature_importances_", None)
         if raw_scores is None:
             raw_scores = fitted.coef_
         selected = np.array([np.argmax(np.abs(raw_scores))])
-    return np.sort(selected)
+    return np.sort(selected), fallback_triggered
 
 
 class TimeSeriesFeatureSelector(BaseEstimator, TransformerMixin):
@@ -88,18 +94,20 @@ class TimeSeriesFeatureSelector(BaseEstimator, TransformerMixin):
                 raise ValueError(f"k deve ser um inteiro positivo, recebido: {self.k!r}.")
             scores, _ = f_regression(X, y)
             self.selected_indices_ = _select_top_k(scores, self.k, X.shape[1])
+            self.fallback_triggered_ = False
         elif self.strategy == "mutual_info":
             if self.k <= 0:
                 raise ValueError(f"k deve ser um inteiro positivo, recebido: {self.k!r}.")
             scores = mutual_info_regression(X, y, random_state=self.random_state)
             self.selected_indices_ = _select_top_k(scores, self.k, X.shape[1])
+            self.fallback_triggered_ = False
         elif self.strategy == "rf_embedded":
             estimator = RandomForestRegressor(random_state=self.random_state)
-            self.selected_indices_ = _select_via_embedded_threshold(estimator, X, y)
+            self.selected_indices_, self.fallback_triggered_ = _select_via_embedded_threshold(estimator, X, y)
         elif self.strategy == "lasso":
             cv = TimeSeriesSplit(n_splits=_LASSO_CV_N_SPLITS)
             estimator = LassoCV(cv=cv, random_state=self.random_state, max_iter=10000)
-            self.selected_indices_ = _select_via_embedded_threshold(estimator, X, y)
+            self.selected_indices_, self.fallback_triggered_ = _select_via_embedded_threshold(estimator, X, y)
         else:
             raise ValueError(
                 f"strategy desconhecida: {self.strategy!r}. "

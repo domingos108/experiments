@@ -82,6 +82,12 @@ Prova de conceito em andamento (MI vs. CCF sobre resíduos). Não versionado no 
 
 Desde 2026-07-02, `notebook/single_models/mlp_exec.ipynb` usa `experiment_params['diff_kpss'] = False`, por solicitação do orientador do pesquisador (`diff_kpss=True` causava problemas em alguns casos). Este é o comportamento correto atual do baseline MLP — **não é uma divergência a corrigir** em sessões futuras.
 
+**Nota de proveniência (Tarefa 3.9, 2026-07-21):** o `.pkl` de `1mlp` (`data/result/chamados/*_1mlp.pkl`) ainda está com `diff_kpss=True` persistido — foi gerado ANTES do commit `43dae50` (2026-07-02) que introduziu essa mudança em `mlp_exec.ipynb`, e nunca foi regenerado (`*.pkl` é gitignored, notebook roda com `force=False`). Isso é uma divergência real entre o artefato persistido e o código-fonte atual, análoga à corrigida na Seção 3.6 abaixo — mas **fora do escopo da Tarefa 3.9**, que tratou só do baseline MLP híbrido (`1amv1`). Pendente de decisão do pesquisador sobre quando regenerar `1mlp` (ver CHECKPOINTS.md, "Pendências conhecidas").
+
+### 3.6 `activation='logistic'` no baseline MLP híbrido (`arima_mlp.ipynb`) — Configuração Intencional e Atual
+
+Desde 2026-07-02 (commit `43dae5076efb2fb8b859ad796ec7d0f143047ece`), `notebook/residual_hydridsystem/arima_mlp.ipynb` usa `MLPRegressor(activation='logistic', solver='lbfgs')` — mudança intencional e aprovada, preservando a capacidade da MLP de capturar não-linearidade no resíduo do ARIMA (premissa central do sistema híbrido; `activation='identity'`, usado antes dessa mudança, tornava a camada oculta puramente linear). O `.pkl` do baseline (`data/result/chamados/*_1amv1.pkl`) foi regenerado em 2026-07-21 (Tarefa 3.9) para eliminar uma divergência em que o artefato persistido (gerado antes do commit acima) ainda refletia `activation='identity'`. Este é o comportamento correto atual — **não é uma divergência a corrigir** em sessões futuras. A versão `identity` anterior foi arquivada em `data/result/chamados_baseline_identity_archive_20260721/` (não usar como baseline oficial — ver `README.md` naquela pasta).
+
 ---
 
 ## 4. Diretriz de Contribuição Futura — Feature Selection Nativo (Sem Monkey Patch)

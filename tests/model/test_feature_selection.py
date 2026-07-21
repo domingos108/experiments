@@ -188,6 +188,19 @@ class TestRfEmbeddedStrategy:
 
         assert selector_sparse.selected_indices_.shape[0] != selector_dense.selected_indices_.shape[0]
 
+    def test_fallback_never_triggers_for_rf_embedded_even_with_zero_signal(self):
+        """Tarefa 3.6: docstring de _select_via_embedded_threshold ja
+        documentava que rf_embedded nao sofre do problema de zero-features
+        (threshold 'mean' usa `>=`) -- fallback_triggered_ deve confirmar
+        isso mecanicamente mesmo no mesmo cenario degenerado (y constante)
+        que forca o Lasso a zerar tudo."""
+        X = np.random.RandomState(0).normal(size=(100, 10))
+        y = np.zeros(100)
+
+        selector = TimeSeriesFeatureSelector(strategy="rf_embedded", random_state=0).fit(X, y)
+
+        assert selector.fallback_triggered_ is False
+
 
 class TestLassoStrategy:
     def test_selects_the_two_truly_linear_informative_features(self):
@@ -227,6 +240,16 @@ class TestLassoStrategy:
 
         assert selector_sparse.selected_indices_.shape[0] != selector_dense.selected_indices_.shape[0]
 
+    def test_fallback_triggered_is_false_on_a_normal_selectfrommodel_cut(self):
+        """Tarefa 3.6: quando SelectFromModel corta normalmente (>=1 feature
+        sobrevive ao threshold por si so), fallback_triggered_ deve ser False
+        -- a selecao veio do Lasso, nao do fallback de zero-features."""
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+
+        selector = TimeSeriesFeatureSelector(strategy="lasso", random_state=0).fit(X, y)
+
+        assert selector.fallback_triggered_ is False
+
     def test_falls_back_to_one_feature_when_lasso_zeroes_every_coefficient(self):
         """Bug real encontrado por code-review (angulo cross-file) na Tarefa
         3.1: SelectFromModel(LassoCV(...), threshold=None) usa um limiar fixo
@@ -251,6 +274,10 @@ class TestLassoStrategy:
         assert selector.selected_indices_.shape[0] >= 1
         X_transformed = selector.transform(X)
         assert X_transformed.shape[1] >= 1
+        # Tarefa 3.6: expoe que a selecao acima veio do fallback, nao de um
+        # corte genuino do SelectFromModel -- distincao cientificamente
+        # relevante (ausencia de sinal linear mascarada de selecao real).
+        assert selector.fallback_triggered_ is True
 
     def test_cv_is_time_series_split_never_kfold(self, monkeypatch):
         """Regra nao-negociavel do PLANO_ARQUITETURA.md (Secao 2, metodo #4):
@@ -387,6 +414,24 @@ class TestZeroDataLeakage:
 
         forbidden_attrs = {"X", "y", "X_", "y_", "X_train", "y_train"}
         assert forbidden_attrs.isdisjoint(vars(selector).keys())
+
+
+class TestFallbackTriggeredAttribute:
+    """Tarefa 3.6: expoe se a selecao final veio do fallback de zero-features
+    (Tarefa 3.1) ou de um corte genuino -- necessario para distinguir
+    "Lasso concentrou o sinal em 1 feature" de "Lasso nao achou sinal
+    nenhum e o fallback deterministico mascarou isso como selecao"."""
+
+    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info"])
+    def test_always_false_for_filter_strategies(self, strategy):
+        """f_test/mutual_info nao tem conceito de fallback -- sempre mantem
+        exatamente k features por construcao, entao o atributo existe (para
+        uso uniforme por quem consome as 4 estrategias) mas e sempre False."""
+        X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
+
+        selector = TimeSeriesFeatureSelector(strategy=strategy, k=2, random_state=0).fit(X, y)
+
+        assert selector.fallback_triggered_ is False
 
 
 class TestNFeaturesInAttribute:
