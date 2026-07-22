@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Repeticao,Strategy,N_Features_Selected,N_Features_Total,Selected_Indices,Selected_Lag_Names
+chamados_v4_fs_arimasvr_lasso,airlines,1aslasso,0,lasso,1,20,0,lag_20
+chamados_v4_fs_arimasvr_lasso,austres,1aslasso,0,lasso,1,1,0,lag_1
+chamados_v4_fs_arimasvr_lasso,coloradoRiver,1aslasso,0,lasso,1,16,5,lag_11
+chamados_v4_fs_arimasvr_lasso,sunspot,1aslasso,0,lasso,2,9,0;5,lag_9;lag_4

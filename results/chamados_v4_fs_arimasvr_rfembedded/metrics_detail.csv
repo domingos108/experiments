@@ -1,0 +1,9 @@
+ExperimentID,Serie,Modelo,Repeticao,ValMetric,MSE,RMSE,MAE,MAPE,theil,ARV,IA,POCID
+chamados_v4_fs_arimasvr_rfembedded,airlines,1arima,0,,389.194049,19.728002,15.102607,3.315326,0.134713,0.066301,0.983139,78.571429
+chamados_v4_fs_arimasvr_rfembedded,airlines,1asrfembedded,0,12.368884,401.564701,20.039079,16.206722,3.501709,0.130439,0.067023,0.982775,78.571429
+chamados_v4_fs_arimasvr_rfembedded,austres,1arima,0,,358.130880,18.924346,13.710292,0.078380,0.129713,0.034904,0.990999,75.000000
+chamados_v4_fs_arimasvr_rfembedded,austres,1asrfembedded,0,16.876589,357.661339,18.911936,14.242368,0.081454,0.129543,0.034860,0.991012,75.000000
+chamados_v4_fs_arimasvr_rfembedded,coloradoRiver,1arima,0,,0.104961,0.323976,0.262984,28.817193,0.755655,0.698832,0.667249,52.702703
+chamados_v4_fs_arimasvr_rfembedded,coloradoRiver,1asrfembedded,0,0.682553,0.088292,0.297139,0.249926,27.585613,0.905792,0.679113,0.696243,48.648649
+chamados_v4_fs_arimasvr_rfembedded,sunspot,1arima,0,,365.478709,19.117497,15.719171,36.503112,0.346894,0.193887,0.951367,67.857143
+chamados_v4_fs_arimasvr_rfembedded,sunspot,1asrfembedded,0,21.671031,419.462613,20.480786,16.566847,46.039668,0.325414,0.218758,0.944401,60.714286

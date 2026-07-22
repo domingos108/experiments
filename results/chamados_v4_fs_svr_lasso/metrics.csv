@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,N_Repeticoes,MSE_mean,MSE_std,RMSE_mean,RMSE_std,MAE_mean,MAE_std,MAPE_mean,MAPE_std,theil_mean,theil_std,ARV_mean,ARV_std,IA_mean,IA_std,POCID_mean,POCID_std
+chamados_v4_fs_svr_lasso,airlines,1svrlasso,1,502.715697,,22.421322,,18.954716,,4.166817,,0.160965,,0.087618,,0.977858,,71.428571,
+chamados_v4_fs_svr_lasso,austres,1svrlasso,1,193.564723,,13.912754,,10.314447,,0.058814,,0.081070,,0.018572,,0.995194,,87.500000,
+chamados_v4_fs_svr_lasso,coloradoRiver,1svrlasso,1,0.015925,,0.126195,,0.099813,,12.672755,,0.869467,,0.611289,,0.878237,,67.567568,
+chamados_v4_fs_svr_lasso,sunspot,1svrlasso,1,953.398511,,30.877152,,22.161672,,52.913347,,1.128117,,0.501124,,0.868373,,71.428571,

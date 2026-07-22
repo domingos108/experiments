@@ -1,16 +1,18 @@
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.feature_selection import SelectFromModel, f_regression, mutual_info_regression
+from sklearn.feature_selection import RFECV, SelectFromModel, f_regression, mutual_info_regression
 from sklearn.linear_model import LassoCV
 from sklearn.model_selection import TimeSeriesSplit
 
-_STRATEGIES = ("f_test", "mutual_info", "rf_embedded", "lasso")
+_STRATEGIES = ("f_test", "mutual_info", "rf_embedded", "lasso", "rfecv")
 
-# Numero de folds do TimeSeriesSplit interno do lasso. Fixo (nao exposto no
-# construtor) para manter a assinatura publica minima -- ver PLANO_ARQUITETURA.md
-# Secao 2, metodo #4: cv deve ser sempre cronologico, nunca KFold aleatorio.
+# Numero de folds do TimeSeriesSplit interno do lasso/rfecv. Fixo (nao exposto
+# no construtor) para manter a assinatura publica minima -- ver
+# PLANO_ARQUITETURA.md Secao 2, metodos #4/#5: cv deve ser sempre cronologico,
+# nunca KFold aleatorio.
 _LASSO_CV_N_SPLITS = 3
+_RFECV_CV_N_SPLITS = 3
 
 
 def _select_top_k(scores, k, n_features):
@@ -53,12 +55,51 @@ def _select_via_embedded_threshold(estimator, X, y):
     return np.sort(selected), fallback_triggered
 
 
+def _select_via_rfecv(X, y, random_state):
+    """rfecv (Tarefa 4): RFECV(RandomForestRegressor, cv=TimeSeriesSplit(...),
+    min_features_to_select=1) elimina features recursivamente, guiado por CV
+    cronologica -- o numero de features emerge do proprio ajuste, como
+    rf_embedded/lasso. Diferente deles, min_features_to_select=1 e um piso
+    GARANTIDO pelo proprio RFECV (nunca retorna 0 features) -- nao precisa do
+    fallback de zero-features da Tarefa 3.1.
+
+    RFECV exige >=2 features de entrada (RFE nao faz sentido com 1 unica
+    candidata -- nao ha o que eliminar recursivamente; caso real:
+    austres.txt, N_Features_Total=1, ver PLANO_ARQUITETURA.md/Tarefa 3.2).
+    Decisao confirmada com o pesquisador antes de implementar (Tarefa 4): com
+    1 unica feature, mantem-la trivialmente sem chamar RFECV -- mesmo
+    invariante das outras 4 estrategias (nunca crasha, pelo menos 1 feature
+    sempre sobrevive). Achado de code-review (angulos line-by-line + altitude):
+    a guarda so cobre exatamente 1 feature -- 0 features e um estado
+    estruturalmente invalido (nunca acontece via create_windowing hoje, que
+    sempre produz lag_size>=1) que deve falhar alto e claro (deixado cair no
+    proprio erro do RFECV, 'Found array with 0 feature(s)...'), nao ser
+    tratado como o mesmo caso de negocio legitimo de 1 feature.
+
+    Retorna (selected_indices, fallback_triggered) -- fallback_triggered=True
+    só na guarda de 1-feature (RFECV nunca rodou de verdade); False mesmo
+    quando o proprio RFECV converge para 1 feature via CV genuina."""
+    if X.shape[1] == 1:
+        return np.array([0]), True
+
+    selector = RFECV(
+        RandomForestRegressor(random_state=random_state),
+        cv=TimeSeriesSplit(n_splits=_RFECV_CV_N_SPLITS),
+        step=1,
+        min_features_to_select=1,
+    )
+    selector.fit(X, y)
+    selected = np.where(selector.support_)[0]
+    return np.sort(selected), False
+
+
 class TimeSeriesFeatureSelector(BaseEstimator, TransformerMixin):
     """
     Seletor de lags para os sistemas hibridos residuais (ver PLANO_ARQUITETURA.md,
     Secao 2). Estrategias suportadas: 'f_test' (filtro linear), 'mutual_info'
     (filtro por teoria da informacao), 'rf_embedded' (embedded, importancia por
-    reducao de impureza) e 'lasso' (embedded, regularizacao L1).
+    reducao de impureza), 'lasso' (embedded, regularizacao L1) e 'rfecv'
+    (wrapper, eliminacao recursiva guiada por CV).
 
     Duas familias de contrato coexistem, ambas convergindo para o mesmo
     atributo publico `selected_indices_` (array ordenado de indices) usado
@@ -67,13 +108,14 @@ class TimeSeriesFeatureSelector(BaseEstimator, TransformerMixin):
     - 'f_test'/'mutual_info' (filtros): calculam um score por feature e
       mantem as `k` de maior score -- `k` e um hiperparametro pesquisavel
       pelo GridSearch (`selector__k`).
-    - 'rf_embedded'/'lasso' (embedded): delegam a contagem para
-      `sklearn.feature_selection.SelectFromModel(threshold=None)` -- o
-      numero de features selecionadas emerge do proprio ajuste (corte
-      automatico do sklearn: 'mean' das importancias para RF, ~0 para Lasso
-      via deteccao de L1 -- ver PLANO_ARQUITETURA.md Secao 1.5). `k` NAO e
-      lido por essas duas estrategias (Tarefa 3.1 -- reversao do top-k
-      uniforme da Tarefa 3, a pedido do orientador).
+    - 'rf_embedded'/'lasso'/'rfecv' (embedded/wrapper): delegam a contagem
+      para `sklearn.feature_selection.SelectFromModel`/`RFECV` -- o numero de
+      features selecionadas emerge do proprio ajuste (corte automatico do
+      sklearn: 'mean' das importancias para RF, ~0 para Lasso via deteccao de
+      L1, CV interna para RFECV -- ver PLANO_ARQUITETURA.md Secao 1.5). `k`
+      NAO e lido por essas 3 estrategias (Tarefa 3.1 -- reversao do top-k
+      uniforme da Tarefa 3, a pedido do orientador; Tarefa 4 estendeu a mesma
+      convencao para 'rfecv').
 
     Uso previsto: como o step 'selector' de um sklearn.Pipeline, precedendo o
     estimador (MLPRegressor/SVR) dentro de Additive/SKlearnModel.
@@ -108,6 +150,8 @@ class TimeSeriesFeatureSelector(BaseEstimator, TransformerMixin):
             cv = TimeSeriesSplit(n_splits=_LASSO_CV_N_SPLITS)
             estimator = LassoCV(cv=cv, random_state=self.random_state, max_iter=10000)
             self.selected_indices_, self.fallback_triggered_ = _select_via_embedded_threshold(estimator, X, y)
+        elif self.strategy == "rfecv":
+            self.selected_indices_, self.fallback_triggered_ = _select_via_rfecv(X, y, self.random_state)
         else:
             raise ValueError(
                 f"strategy desconhecida: {self.strategy!r}. "

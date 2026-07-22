@@ -107,6 +107,61 @@ Por isso a Parte C da Tarefa 3.1 é um **script de extração pós-hoc**, não u
 
 **Limitação aceita:** o histórico de `chamados_v4_fs_ftest` (já rodado antes desta instrumentação) não é recuperável — só existiu como variável local durante uma execução já finalizada. A instrumentação vale para rodadas futuras; recapturar o histórico dessa rodada específica exige re-rodar o grid.
 
+### 1.7 Tarefa 4 — `rfecv` (último método obrigatório do arsenal)
+
+**Decisões de design (brainstorming, confirmadas com o pesquisador antes de implementar):**
+
+- **`RFECV(RandomForestRegressor(random_state=...), cv=TimeSeriesSplit(n_splits=3), step=1, min_features_to_select=1)`** — mesma convenção de `cv` cronológico obrigatório já usada pelo Lasso (Seção 1.5), reforçada aqui por ser o método mais caro e mais fácil de configurar `cv` errado do arsenal.
+- **`support_`/`np.where(...)` mapeiam para `selected_indices_`** exatamente como `SelectFromModel.get_support()` já faz para `rf_embedded`/`lasso` — confirmado com dados reais antes de assumir compatibilidade automática com `export_selected_features.py`.
+- **`min_features_to_select=1` é um piso garantido pelo próprio `RFECV`** (nunca retorna 0 features) — diferente do Lasso, **não precisa** do mecanismo de fallback de zero-features da Tarefa 3.1.
+- **Achado real do pré-check (não hipotético): `RFECV` levanta `ValueError` com `n_features_in_ < 2`** — RFE não faz sentido conceitualmente com 1 única feature candidata (não há o que eliminar recursivamente). Caso real: `austres.txt` (`N_Features_Total=1`, Seção 1.3/Tarefa 3.2). Decisão confirmada com o pesquisador: guarda defensiva dentro de `_select_via_rfecv` (mantém a única feature trivialmente, sem chamar `RFECV`, com `fallback_triggered_=True`) — mesmo invariante das outras 4 estratégias (nunca crasha, pelo menos 1 feature sempre sobrevive), em vez de excluir `austres.txt` só deste notebook (que deixaria a classe insegura para qualquer uso futuro fora dele).
+- **`k` NÃO é lido por `rfecv`** — mesma convenção de `rf_embedded`/`lasso` (Tarefa 3.1/3.9): o número de features emerge da CV interna, não de um hiperparâmetro de grid externo. `arima_mlp_rfecv.ipynb` nasce **sem** `selector__k` no `model_parameters` (não precisa da limpeza que `rf_embedded`/`lasso` precisaram na Tarefa 3.9).
+- **Custo computacional medido (não estimado por extrapolação teórica)** antes de finalizar o notebook: 1 fit isolado em dados sintéticos do tamanho real de cada série — `airlines` (80×20) 5.5s, `coloradoRiver` (568×16) 11.7s, `sunspot` (216×9) 2.9s. Extrapolado para produção (3 combinações de `hidden_layer_sizes` × `model_exec=10` na busca + 10 no refit final = 40 fits/série): **≈13-14 minutos para as 4 séries** — viável para "Run All" manual, sem necessidade de `step`/`min_features_to_select` mais agressivo.
+- **Escopo estritamente `ARIMA-MLP` (`Additive`)** — `ARIMA-SVR`, `MLP`/`SVR` single ficam para depois de `rfecv` validado aqui, conforme instrução explícita da Tarefa 4.
+
+### 1.8 Tarefa 5 — Generalização para `MLP` single (`SKlearnModel`), primeira família fora de `Additive`
+
+**Pré-checks confirmados com evidência real (não suposição), antes de criar qualquer notebook:**
+
+- **`SKlearnModel` é agnóstico à identidade de `model` na mesma forma que `Additive`** — `fit_predict_ml_schemma` (`src/model/single_ml_model_exp.py`) só chama `model.fit(x_train, y_train)`/`model.predict(x)`, exatamente como `generics.fit_predict_ml_schemma` usado por `Additive`. Confirmado com um teste de integração real (`tests/model/test_single_ml_model_exp.py::TestSKlearnModelAcceptsPipeline`) rodando `Pipeline([selector, MLPRegressor])` fim-a-fim através de `GridSearch`/`SKlearnModel`, sem nenhuma mudança em `single_ml_model_exp.py`/`grid_search_exp.py`.
+- **`lag_size='auto'` resolve para os MESMOS valores no contexto MLP single que no híbrido ARIMA-MLP** — medido diretamente (não assumido): `airlines`=20, `austres`=1, `coloradoRiver`=16, `sunspot`=9, idêntico nas 4 séries. Isso não era garantido a priori (`get_max_lag_to_consider` usa PACF sobre a série que de fato chega em `open_format_train_val_test`, que difere entre os dois contextos — série bruta no single-model vs. resíduo do ARIMA no híbrido) — coincidência empírica, não estrutural, e testada (`test_lag_size_auto_resolves_to_same_value_as_arima_mlp_hybrid`) para detectar se algum dia divergir.
+- **`df_train` tem mais linhas no single-model que no híbrido** para a mesma série (ex. `airlines`: 96 vs. 80) — o híbrido perde linhas extras por causa do janelamento duplo implícito (o resíduo do ARIMA já é truncado por `lag_size_formated` dentro de `input_linear_info`, depois passa por outro janelamento dentro de `fit_predict_model`). Diferença estrutural esperada, não um bug.
+- **`SKlearnModel` não depende de nenhum modelo linear pré-treinado** (ao contrário de `Additive`, que precisa do `.pkl` do ARIMA via `linear_model_name`) — os 5 notebooks de `MLP` single não têm a célula de "copiar o ARIMA pré-treinado" que os notebooks de `ARIMA-MLP` têm (uma célula a menos: 6 em vez de 7).
+
+**Convenção de nomenclatura definida nesta tarefa (referência para `SVR` single/`ARIMA-SVR` nas próximas):**
+
+- **Notebooks**: `notebook/single_models/mlp_<estrategia_fs>.ipynb` (ao lado de `mlp_exec.ipynb`, o baseline protegido) — `mlp_ftest.ipynb`, `mlp_mutual_info.ipynb`, `mlp_rf_embedded.ipynb`, `mlp_lasso.ipynb`, `mlp_rfecv.ipynb`.
+- **`model_name`** (sufixo do `.pkl`, sem underscore): `mlpftest`, `mlpmutualinfo`, `mlprfembedded`, `mlplasso`, `mlprfecv` — `GridSearch.__init__` prefixa `f'{horizon}{model_name}'` automaticamente, dando `1mlpftest.pkl` etc. (mesma lógica de `amv1rfembedded` → `1amv1rfembedded.pkl` no híbrido). Confirmado sem colisão com nenhum `.pkl` existente em `data/result/`.
+- **`experiment_id`**: `chamados_v4_fs_mlp_<estrategia>` (`chamados_v4_fs_mlp_ftest`, `_mutualinfo`, `_rfembedded`, `_lasso`, `_rfecv`) — o segmento `mlp` distingue explicitamente esta família da família híbrida (`chamados_v4_fs_<estrategia>`, sem `mlp`), já que ambas terão os mesmos 5 nomes de método.
+- **Nenhum dos 5 notebooks foi executado** — preparados e validados (sintaxe Python real de cada célula + execução real das células de config/sanity-check, sem tocar `data/result/`), aguardando execução manual.
+
+### 1.9 Portão de validação MLP single + generalização de `compare_fs_vs_baseline.py`
+
+Após a execução manual dos 5 notebooks de FS em `MLP` single (Tarefa 5) e do baseline `1mlp` corrigido (Tarefa 5.1), validação estrutural confirmou: os 20 `.pkl` (5 métodos × 4 séries) têm `activation='logistic'`/`diff_kpss=False` corretos; nenhum arquivo da família híbrida (`amv1*`) contaminou os diretórios `chamados_v4_fs_mlp_*`; a guarda de 1-feature do `rfecv` (Tarefa 4) funcionou corretamente em produção pela primeira vez (`austres`: `fallback_triggered_=True`, sem crash); os 5 baselines protegidos permaneceram intactos (confirmado por `mtime`).
+
+**`src/utils/compare_fs_vs_baseline.py` generalizado** (`build_comparison()` ganhou `baseline_model_name`/`linear_model_name_to_exclude`, com os valores antigos `'1amv1'`/`'1arima'` como default — 100% retrocompatível, testado). Motivo: `BASELINE_MODEL_NAME`/`LINEAR_MODEL_NAME` eram constantes hardcoded específicas da família híbrida; `MLP` single usa baseline `'1mlp'` e não copia nenhum modelo linear para dentro do `result_dir` de FS (`SKlearnModel` não depende de ARIMA pré-treinado), então precisava de `linear_model_name_to_exclude=None` para desligar aquele filtro. `notebook/compare_fs_results_mlp.ipynb` (novo, 3 células, mesmo padrão de `compare_fs_results.ipynb`) é a versão desta família — a lógica de comparação em si não foi duplicada, só a célula de configuração (mesma filosofia "1 notebook por combinação" já usada em todo o projeto, Seção 5). O mesmo padrão (copiar o notebook de comparação, trocar `baseline_model_name`/`fs_variants`) se aplica a `SVR` single/`ARIMA-SVR` quando chegar a vez.
+
+### 1.10 Tarefa 6 — Generalização para `SVR` single (`SKlearnModel`), segunda família fora de `Additive`
+
+Mesma integração `Pipeline([selector, estimador])` da Tarefa 5, agora com `SVR` no lugar de `MLPRegressor` — confirmada com um teste de integração real (`tests/model/test_single_ml_model_exp.py::TestSKlearnModelAcceptsPipelineWithSVR`), sem nenhuma mudança de código. `SVR.get_params()` não colide com `strategy`/`k`/`random_state` do seletor, e o namespace `estimator__*`/`selector__*` do `Pipeline` evitaria colisão de qualquer forma.
+
+**Duas diferenças reais em relação à Tarefa 5 (não um copy-paste ingênuo do template MLP):**
+
+- **`model_exec=1` (determinístico), não 10.** `SVR` é determinístico (CLAUDE.md Seção 3.4, mesma convenção do baseline `svr_exec.ipynb`) — uniformizar com o `model_exec=10` do MLP violaria essa regra explícita.
+- **`diff_kpss=True`, não `False`** — `svr_exec.ipynb` usa `diff_kpss=True` (já confirmado sem divergência de artefato na Tarefa 3.9, pré-check 3: `.pkl` persistido bate com o código-fonte atual). `lag_size='auto'` resolve para os MESMOS valores já medidos (`airlines`=20, `austres`=1, `coloradoRiver`=16, `sunspot`=9) — medido com `diff_kpss=True` de verdade, não assumido a partir do valor de `diff_kpss=False` do MLP, porque `get_max_lag_to_consider` roda sobre `ts_univariate` **antes** da diferenciação KPSS (`input.py`), então em teoria `diff_kpss` não deveria afetar esse valor — confirmado empiricamente, não só por leitura de código. `df_train` tem 1 linha a menos que o MLP single para a mesma série (a diferenciação KPSS consome uma linha) — diferença estrutural esperada.
+
+**Grid de hiperparâmetros** extraído de `svr_exec.ipynb`: `C=[10,100,1000]`, `gamma=['auto']`, `kernel=['rbf']`, `epsilon=[0.1,0.01,0.001]`, `tol=[0.001]` — replicado com prefixo `estimator__` nos 5 notebooks novos, mantendo paridade com o baseline.
+
+**Nomenclatura**: `notebook/single_models/svr_<estrategia_fs>.ipynb`, `model_name` = `svrftest`/`svrmutualinfo`/`svrrfembedded`/`svrlasso`/`svrrfecv`, `experiment_id` = `chamados_v4_fs_svr_<estrategia>` — mesmo padrão da Tarefa 5, sem colisão com nenhum `.pkl`/diretório existente. **Nenhum dos 5 notebooks foi executado.**
+
+### 1.11 ⚠️ NOTA PROVISÓRIA (não definitiva) — `gamma='auto'` do `SVR` confunde efeito de FS com largura de kernel
+
+**Esta nota NÃO segue o padrão das Seções 3.5/3.6 do CLAUDE.md (`diff_kpss`/`activation`) — aquelas são decisões fechadas; esta é uma decisão em aberto, sujeita a mudar.**
+
+Achado (família `SVR` single, Tarefa 6): `gamma='auto'` do `sklearn.svm.SVR` é calculado internamente como `1 / n_features`. Como a Feature Selection muda `n_features` por construção, `gamma` muda automaticamente junto com a seleção — o que significa que qualquer diferença de RMSE entre o baseline (todas as features) e uma variante de FS (menos features) mistura dois efeitos que deveriam ser isolados: (a) o efeito genuíno de remover features irrelevantes/redundantes, e (b) o efeito colateral de uma largura de kernel RBF diferente. Isso vale tanto para `SVR` single quanto para este híbrido `ARIMA-SVR` (mesmo estimador, mesmo mecanismo — não é uma surpresa nova aqui, só a mesma limitação se repetindo).
+
+**Decisão do pesquisador: manter `gamma='auto'` por ora, não fixar um valor numérico.** A ser revisada com o orientador. **Se essa decisão mudar no futuro, as famílias `SVR` single (Tarefa 6) e `ARIMA-SVR` (Tarefa 7) precisarão ser re-rodadas** — os `.pkl` já gerados/a gerar não seriam mais comparáveis a uma rodada com `gamma` fixo. Ver também CHECKPOINTS.md, "Pendências conhecidas", para o registro de acompanhamento.
+
 ---
 
 ## 2. O Arsenal de Algoritmos
@@ -151,23 +206,32 @@ Por isso a Parte C da Tarefa 3.1 é um **script de extração pós-hoc**, não u
 
 ---
 
-## 5. Convenção de Nomenclatura de Notebooks por Combinação FS × Híbrido
+## 5. Convenção de Nomenclatura de Notebooks por Combinação FS × Arquitetura
 
-`notebook/residual_hydridsystem/arima_mlp.ipynb` e `arima_svr.ipynb` permanecem intocáveis — são os baselines da Seção 3 do [CLAUDE.md](CLAUDE.md) e continuam produzindo exatamente `<serie>_1amv1.pkl`/`<serie>_1as.pkl`. Cada combinação de (híbrido × estratégia de Feature Selection) ganha seu **próprio notebook dedicado**, nunca sobrescrevendo o baseline:
+`notebook/residual_hydridsystem/arima_mlp.ipynb`/`arima_svr.ipynb` e `notebook/single_models/mlp_exec.ipynb`/`svr_exec.ipynb` permanecem intocáveis — são os baselines da Seção 3 do [CLAUDE.md](CLAUDE.md). Cada combinação de (arquitetura × estratégia de Feature Selection) ganha seu **próprio notebook dedicado**, nunca sobrescrevendo o baseline:
 
 ```
-<hibrido>_<estrategia_fs>.ipynb
+<hibrido>_<estrategia_fs>.ipynb          (notebook/residual_hydridsystem/, ex. arima_mlp_ftest.ipynb)
+<single_model>_<estrategia_fs>.ipynb     (notebook/single_models/, ex. mlp_ftest.ipynb -- Tarefa 5)
 ```
+
+`experiment_id`: híbridos usam `chamados_v4_fs_<estrategia>`; famílias single-model usam `chamados_v4_fs_<modelo>_<estrategia>` (ex. `chamados_v4_fs_mlp_ftest`) — o segmento extra (`mlp`, e futuramente `svr`) evita colisão de nomes entre as duas famílias, que compartilham os mesmos 5 nomes de estratégia (Tarefa 5, Seção 1.8).
 
 Exemplos já existentes ou esperados pelo roadmap (Seção 2):
 
-| Notebook | Híbrido | Estratégia FS | Status |
+| Notebook | Arquitetura | Estratégia FS | Status |
 |---|---|---|---|
-| `arima_mlp_ftest.ipynb` | ARIMA-MLP (`Additive`) | `f_test` | Implementado (Tarefa 2) |
-| `arima_mlp_mutual_info.ipynb` | ARIMA-MLP (`Additive`) | `mutual_info` | Não implementado |
-| `arima_mlp_rf_embedded.ipynb` | ARIMA-MLP (`Additive`) | `rf_embedded` | Não implementado (Tarefa 3) |
-| `arima_mlp_lasso.ipynb` | ARIMA-MLP (`Additive`) | `lasso` | Não implementado (Tarefa 3) |
-| `arima_mlp_rfecv.ipynb` | ARIMA-MLP (`Additive`) | `rfecv` | Não implementado (Tarefa 4) |
-| `arima_svr_ftest.ipynb` | ARIMA-SVR (`Additive`) | `f_test` | Não implementado |
+| `arima_mlp_ftest.ipynb` | ARIMA-MLP (`Additive`) | `f_test` | Executado (Tarefa 3.2) |
+| `arima_mlp_mutual_info.ipynb` | ARIMA-MLP (`Additive`) | `mutual_info` | Executado (Tarefa 3.2) |
+| `arima_mlp_rf_embedded.ipynb` | ARIMA-MLP (`Additive`) | `rf_embedded` | Executado e regenerado (Tarefa 3.9) |
+| `arima_mlp_lasso.ipynb` | ARIMA-MLP (`Additive`) | `lasso` | Executado e regenerado (Tarefa 3.9) |
+| `arima_mlp_rfecv.ipynb` | ARIMA-MLP (`Additive`) | `rfecv` | Implementado, notebook pronto, **não executado** (Tarefa 4) |
+| `mlp_ftest.ipynb` | MLP single (`SKlearnModel`) | `f_test` | Notebook pronto, **não executado** (Tarefa 5) |
+| `mlp_mutual_info.ipynb` | MLP single (`SKlearnModel`) | `mutual_info` | Notebook pronto, **não executado** (Tarefa 5) |
+| `mlp_rf_embedded.ipynb` | MLP single (`SKlearnModel`) | `rf_embedded` | Notebook pronto, **não executado** (Tarefa 5) |
+| `mlp_lasso.ipynb` | MLP single (`SKlearnModel`) | `lasso` | Notebook pronto, **não executado** (Tarefa 5) |
+| `mlp_rfecv.ipynb` | MLP single (`SKlearnModel`) | `rfecv` | Notebook pronto, **não executado** (Tarefa 5) |
+| `arima_svr_ftest.ipynb` | ARIMA-SVR (`Additive`) | `f_test` | Não implementado — fora do escopo da Tarefa 5 |
+| `svr_ftest.ipynb` | SVR single (`SKlearnModel`) | `f_test` | Não implementado — fora do escopo da Tarefa 5 |
 
 Quando o roadmap evoluir para as combinações não-lineares de 2–3 estágios (`NonLinear`, Seção 4 do CLAUDE.md), o mesmo padrão se aplica trocando o prefixo do híbrido (ex. `nonlinear_mlp_ftest.ipynb`). Cada `experiment_id` usado nesses notebooks segue a regra da Seção 3.2 do CLAUDE.md (nome novo e explícito, nunca reaproveitado).

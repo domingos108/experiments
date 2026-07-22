@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_std,N_Repeticoes,N_Features_Total
+chamados_v4_fs_arimasvr_rfembedded,airlines,1asrfembedded,rf_embedded,9.000000,,1,20
+chamados_v4_fs_arimasvr_rfembedded,austres,1asrfembedded,rf_embedded,1.000000,,1,1
+chamados_v4_fs_arimasvr_rfembedded,coloradoRiver,1asrfembedded,rf_embedded,4.000000,,1,16
+chamados_v4_fs_arimasvr_rfembedded,sunspot,1asrfembedded,rf_embedded,4.000000,,1,9

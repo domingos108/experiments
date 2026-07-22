@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_std,N_Repeticoes,N_Features_Total
+chamados_v4_fs_arimasvr_ftest,airlines,1asftest,f_test,20.000000,,1,20
+chamados_v4_fs_arimasvr_ftest,austres,1asftest,f_test,1.000000,,1,1
+chamados_v4_fs_arimasvr_ftest,coloradoRiver,1asftest,f_test,9.000000,,1,16
+chamados_v4_fs_arimasvr_ftest,sunspot,1asftest,f_test,1.000000,,1,9

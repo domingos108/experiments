@@ -182,3 +182,67 @@ class TestBuildComparison:
 
         row = df[df["Serie"] == "airlines"].iloc[0]
         assert row["ftest_RMSE"] == pytest.approx(8.0)  # a variante FS, nao o ARIMA copiado (12.0)
+
+
+class TestBuildComparisonGeneralizedForOtherFamilies:
+    """Tarefa 6-gate: BASELINE_MODEL_NAME='1amv1'/LINEAR_MODEL_NAME='1arima' eram
+    constantes hardcoded, especificas da familia ARIMA-MLP hibrida -- MLP
+    single usa baseline '1mlp' e NAO tem nenhum '1arima' copiado dentro de
+    cada pasta chamados_v4_fs_mlp_* (SKlearnModel nao depende de modelo
+    linear pre-treinado, Tarefa 5). build_comparison() precisa aceitar o
+    nome do modelo baseline como parametro para nao quebrar/exigir uma copia
+    da funcao a cada familia nova (SVR single, ARIMA-SVR, ...)."""
+
+    def _save_mlp_baseline(self, base_name, rmse, tmp_path):
+        fold, title = generics.format_names("chamados", base_name, "1mlp")
+        generics.save_result(fold, title, [{"experiment": _FakeBaselineExperiment(rmse), "val_metric": rmse}])
+
+    def test_baseline_model_name_parameter_selects_1mlp_instead_of_1amv1(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(config, "MODEL_DATA_PATH", str(tmp_path) + "/")
+        self._save_mlp_baseline("airlines.txt", rmse=9.0, tmp_path=tmp_path)
+        _save_fs_variant("chamados_v4_fs_mlp_ftest", "airlines.txt", "1mlpftest", "f_test", rmse=7.0)
+
+        df = build_comparison(
+            baseline_dir=tmp_path / "chamados",
+            fs_dirs={"ftest": tmp_path / "chamados_v4_fs_mlp_ftest"},
+            baseline_model_name="1mlp",
+        )
+
+        row = df[df["Serie"] == "airlines"].iloc[0]
+        assert row["Baseline_RMSE"] == pytest.approx(9.0)
+        assert row["ftest_RMSE"] == pytest.approx(7.0)
+
+    def test_default_baseline_model_name_still_1amv1_backward_compatible(self, tmp_path, monkeypatch):
+        """A familia hibrida (ja em producao, results/chamados_v4_fs_comparison.csv
+        real) nao pode quebrar -- o default precisa continuar '1amv1' sem
+        que nenhum notebook/script existente precise passar o parametro."""
+        monkeypatch.setattr(config, "MODEL_DATA_PATH", str(tmp_path) + "/")
+        _save_baseline("sunspot.txt", rmse=5.0)
+        _save_fs_variant("chamados_v4_fs_lasso", "sunspot.txt", "1amv1lasso", "lasso", rmse=4.0)
+
+        df = build_comparison(
+            baseline_dir=tmp_path / "chamados",
+            fs_dirs={"lasso": tmp_path / "chamados_v4_fs_lasso"},
+        )
+
+        row = df[df["Serie"] == "sunspot"].iloc[0]
+        assert row["Baseline_RMSE"] == pytest.approx(5.0)
+
+    def test_linear_model_name_to_exclude_none_skips_the_arima_filter(self, tmp_path, monkeypatch):
+        """MLP single nao copia nenhum '1arima' para dentro de
+        chamados_v4_fs_mlp_* -- passar None desliga o filtro por completo,
+        em vez de silenciosamente continuar procurando por '1arima' (que
+        nunca estara la, mas nao deveria ser um comportamento magico)."""
+        monkeypatch.setattr(config, "MODEL_DATA_PATH", str(tmp_path) + "/")
+        self._save_mlp_baseline("austres.txt", rmse=6.0, tmp_path=tmp_path)
+        _save_fs_variant("chamados_v4_fs_mlp_rfecv", "austres.txt", "1mlprfecv", "rfecv", rmse=5.5)
+
+        df = build_comparison(
+            baseline_dir=tmp_path / "chamados",
+            fs_dirs={"rfecv": tmp_path / "chamados_v4_fs_mlp_rfecv"},
+            baseline_model_name="1mlp",
+            linear_model_name_to_exclude=None,
+        )
+
+        row = df[df["Serie"] == "austres"].iloc[0]
+        assert row["rfecv_RMSE"] == pytest.approx(5.5)

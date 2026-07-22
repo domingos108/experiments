@@ -63,28 +63,31 @@ BASELINE_MODEL_NAME = "1amv1"
 LINEAR_MODEL_NAME = "1arima"
 
 
-def _baseline_rmse_by_serie(baseline_dir: Path, metric: str) -> pd.Series:
+def _baseline_rmse_by_serie(baseline_dir: Path, metric: str, baseline_model_name: str) -> pd.Series:
     detail = _collect_metrics_rows(baseline_dir)
     if detail.empty:
         raise ValueError(f"Nenhum resultado encontrado em {baseline_dir}")
 
     agg = _aggregate_metrics_mean(detail)
-    agg = agg[agg["Modelo"] == BASELINE_MODEL_NAME]
+    agg = agg[agg["Modelo"] == baseline_model_name]
     if agg.empty:
         raise ValueError(
-            f"Nenhum resultado do modelo '{BASELINE_MODEL_NAME}' encontrado em {baseline_dir}. "
+            f"Nenhum resultado do modelo '{baseline_model_name}' encontrado em {baseline_dir}. "
             "Confirme que --baseline-dir aponta para data/result/chamados (nunca uma pasta "
-            "chamados_v*_fs_*, ver ambiguidade historica no topo deste arquivo)."
+            "chamados_v*_fs_*, ver ambiguidade historica no topo deste arquivo) e que "
+            "baseline_model_name corresponde a familia sendo comparada (ex. '1amv1' para "
+            "ARIMA-MLP hibrido, '1mlp' para MLP single)."
         )
     return agg.set_index("Serie")[metric]
 
 
-def _fs_rmse_by_serie(result_dir: Path, metric: str) -> pd.Series:
+def _fs_rmse_by_serie(result_dir: Path, metric: str, linear_model_name_to_exclude: str | None) -> pd.Series:
     detail = _collect_metrics_rows(result_dir)
     if detail.empty:
         return pd.Series(dtype=float)
     agg = _aggregate_metrics_mean(detail)
-    agg = agg[agg["Modelo"] != LINEAR_MODEL_NAME]
+    if linear_model_name_to_exclude is not None:
+        agg = agg[agg["Modelo"] != linear_model_name_to_exclude]
     return agg.set_index("Serie")[metric]
 
 
@@ -100,6 +103,8 @@ def build_comparison(
     baseline_dir: Path,
     fs_dirs: dict[str, Path],
     metric: str = "RMSE_mean",
+    baseline_model_name: str = BASELINE_MODEL_NAME,
+    linear_model_name_to_exclude: str | None = LINEAR_MODEL_NAME,
 ) -> pd.DataFrame:
     """
     Retorna um DataFrame com uma linha por serie do baseline e, para cada
@@ -107,13 +112,20 @@ def build_comparison(
     `<strategy>_PctGain` (positivo = variante melhor que o baseline) e,
     quando disponivel, `<strategy>_NFeatures` (media de features
     selecionadas nas repeticoes daquela serie).
+
+    `baseline_model_name`/`linear_model_name_to_exclude` sao parametrizaveis
+    (defaults preservam o comportamento original da familia ARIMA-MLP
+    hibrida: '1amv1'/'1arima') para reuso por outras familias sem duplicar
+    esta funcao -- ex. MLP single usa baseline_model_name='1mlp' e
+    linear_model_name_to_exclude=None (SKlearnModel nao copia nenhum modelo
+    linear pre-treinado para dentro do result_dir de FS, Tarefa 5).
     """
-    baseline_rmse = _baseline_rmse_by_serie(baseline_dir, metric)
+    baseline_rmse = _baseline_rmse_by_serie(baseline_dir, metric, baseline_model_name)
 
     df = pd.DataFrame({"Serie": baseline_rmse.index, "Baseline_RMSE": baseline_rmse.values})
 
     for strategy, result_dir in fs_dirs.items():
-        fs_rmse = _fs_rmse_by_serie(result_dir, metric)
+        fs_rmse = _fs_rmse_by_serie(result_dir, metric, linear_model_name_to_exclude)
         df[f"{strategy}_RMSE"] = df["Serie"].map(fs_rmse)
         df[f"{strategy}_PctGain"] = (
             (df["Baseline_RMSE"] - df[f"{strategy}_RMSE"]) / df["Baseline_RMSE"] * 100
@@ -163,6 +175,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_OUTPUT,
         help=f"Caminho do CSV de saída (padrão: {DEFAULT_OUTPUT})",
     )
+    parser.add_argument(
+        "--baseline-model-name",
+        type=str,
+        default=BASELINE_MODEL_NAME,
+        help=f"Sufixo do modelo baseline dentro de --baseline-dir (padrão: {BASELINE_MODEL_NAME!r} -- ARIMA-MLP híbrido; use '1mlp' para MLP single, etc.).",
+    )
+    parser.add_argument(
+        "--linear-model-name-to-exclude",
+        type=str,
+        default=LINEAR_MODEL_NAME,
+        help=(
+            f"Modelo linear copiado para dentro de cada pasta de FS a ignorar na comparação "
+            f"(padrão: {LINEAR_MODEL_NAME!r}). Passe string vazia para desligar o filtro "
+            "(famílias single-model, como MLP, não copiam nenhum modelo linear)."
+        ),
+    )
     return parser
 
 
@@ -171,7 +199,13 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     fs_dirs = dict(args.fs_dirs)
-    df = build_comparison(args.baseline_dir.resolve(), {k: v.resolve() for k, v in fs_dirs.items()})
+    linear_model_name_to_exclude = args.linear_model_name_to_exclude or None
+    df = build_comparison(
+        args.baseline_dir.resolve(),
+        {k: v.resolve() for k, v in fs_dirs.items()},
+        baseline_model_name=args.baseline_model_name,
+        linear_model_name_to_exclude=linear_model_name_to_exclude,
+    )
 
     save_csv(df, args.output.resolve(), label="CSV de comparação (baseline × variantes FS)")
     print("\n--- Prévia ---")

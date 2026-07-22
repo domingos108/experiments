@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_std,N_Repeticoes,N_Features_Total
+chamados_v4_fs_mlp_rfecv,airlines,1mlprfecv,rfecv,3.100000,0.567646,10,20
+chamados_v4_fs_mlp_rfecv,austres,1mlprfecv,rfecv,1.000000,0.000000,10,1
+chamados_v4_fs_mlp_rfecv,coloradoRiver,1mlprfecv,rfecv,7.100000,4.508018,10,16
+chamados_v4_fs_mlp_rfecv,sunspot,1mlprfecv,rfecv,7.000000,2.054805,10,9

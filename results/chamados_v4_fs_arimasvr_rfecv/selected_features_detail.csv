@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Repeticao,Strategy,N_Features_Selected,N_Features_Total,Selected_Indices,Selected_Lag_Names
+chamados_v4_fs_arimasvr_rfecv,airlines,1asrfecv,0,rfecv,18,20,0;1;2;3;4;5;7;8;9;11;12;13;14;15;16;17;18;19,lag_20;lag_19;lag_18;lag_17;lag_16;lag_15;lag_13;lag_12;lag_11;lag_9;lag_8;lag_7;lag_6;lag_5;lag_4;lag_3;lag_2;lag_1
+chamados_v4_fs_arimasvr_rfecv,austres,1asrfecv,0,rfecv,1,1,0,lag_1
+chamados_v4_fs_arimasvr_rfecv,coloradoRiver,1asrfecv,0,rfecv,9,16,2;3;4;5;6;7;13;14;15,lag_14;lag_13;lag_12;lag_11;lag_10;lag_9;lag_3;lag_2;lag_1
+chamados_v4_fs_arimasvr_rfecv,sunspot,1asrfecv,0,rfecv,4,9,0;5;7;8,lag_9;lag_4;lag_2;lag_1

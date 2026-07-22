@@ -1,0 +1,9 @@
+ExperimentID,Serie,Modelo,N_Repeticoes,MSE_mean,MSE_std,RMSE_mean,RMSE_std,MAE_mean,MAE_std,MAPE_mean,MAPE_std,theil_mean,theil_std,ARV_mean,ARV_std,IA_mean,IA_std,POCID_mean,POCID_std
+chamados_v4_fs_arimasvr_lasso,airlines,1arima,1,389.194049,,19.728002,,15.102607,,3.315326,,0.134713,,0.066301,,0.983139,,78.571429,
+chamados_v4_fs_arimasvr_lasso,airlines,1aslasso,1,371.954602,,19.286125,,14.325620,,3.109897,,0.122320,,0.062649,,0.983991,,78.571429,
+chamados_v4_fs_arimasvr_lasso,austres,1arima,1,358.130880,,18.924346,,13.710292,,0.078380,,0.129713,,0.034904,,0.990999,,75.000000,
+chamados_v4_fs_arimasvr_lasso,austres,1aslasso,1,357.661339,,18.911936,,14.242368,,0.081454,,0.129543,,0.034860,,0.991012,,75.000000,
+chamados_v4_fs_arimasvr_lasso,coloradoRiver,1arima,1,0.104961,,0.323976,,0.262984,,28.817193,,0.755655,,0.698832,,0.667249,,52.702703,
+chamados_v4_fs_arimasvr_lasso,coloradoRiver,1aslasso,1,0.107931,,0.328528,,0.264321,,29.010960,,0.776427,,0.688526,,0.665838,,54.054054,
+chamados_v4_fs_arimasvr_lasso,sunspot,1arima,1,365.478709,,19.117497,,15.719171,,36.503112,,0.346894,,0.193887,,0.951367,,67.857143,
+chamados_v4_fs_arimasvr_lasso,sunspot,1aslasso,1,443.548858,,21.060600,,17.673521,,50.567722,,0.348336,,0.233761,,0.940487,,60.714286,

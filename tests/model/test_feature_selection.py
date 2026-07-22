@@ -18,7 +18,7 @@ from sklearn.linear_model import LassoCV
 from sklearn.model_selection import KFold, TimeSeriesSplit
 
 from model.feature_selection import TimeSeriesFeatureSelector
-from tests.model.conftest import FS_DEV_SERIES
+from tests.model.conftest import FS_DEV_SERIES, load_fs_dev_series_train_data
 
 
 def _synthetic_linear_data(n_samples=60, n_features=8, informative_idx=(0, 3), seed=0):
@@ -64,12 +64,12 @@ class TestStrategyValidation:
         with pytest.raises(ValueError, match="k"):
             selector.fit(X, y)
 
-    @pytest.mark.parametrize("strategy", ["rf_embedded", "lasso"])
+    @pytest.mark.parametrize("strategy", ["rf_embedded", "lasso", "rfecv"])
     @pytest.mark.parametrize("unused_k", [0, -1, -5])
     def test_non_positive_k_does_not_raise_for_embedded_strategies(self, strategy, unused_k):
         """Achado de code-review na Tarefa 3.1: k NAO e lido por rf_embedded/
-        lasso (docstring da classe) -- k=0/negativo nao pode mais disparar
-        ValueError para essas duas estrategias, senao a mensagem do
+        lasso/rfecv (docstring da classe) -- k=0/negativo nao pode mais
+        disparar ValueError para essas estrategias, senao a mensagem do
         docstring ('k NAO e lido') fica inconsistente com o comportamento
         real."""
         X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
@@ -323,6 +323,175 @@ class TestLassoStrategy:
         assert np.array_equal(captured["y"], y_train)
 
 
+class TestRfecvStrategy:
+    """Tarefa 4: rfecv usa RFECV(RandomForestRegressor, cv=TimeSeriesSplit(...),
+    min_features_to_select=1) -- eliminacao recursiva guiada por CV cronologica.
+    Diferente de rf_embedded/lasso, min_features_to_select=1 e um piso GARANTIDO
+    pelo proprio RFECV (nunca retorna 0 features) -- nao precisa do mecanismo de
+    fallback da Tarefa 3.1. Mas RFECV exige >=2 features de entrada (RFE nao faz
+    sentido com 1 unica candidata) -- TimeSeriesFeatureSelector precisa de uma
+    guarda propria para esse caso (decisao confirmada com o pesquisador antes de
+    implementar, Tarefa 4)."""
+
+    def test_ranks_nonlinear_informative_feature_above_pure_noise(self):
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X, y)
+
+        assert 0 in selector.selected_indices_.tolist()
+
+    def test_deterministic_with_fixed_random_state(self):
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector_a = TimeSeriesFeatureSelector(strategy="rfecv", random_state=42).fit(X, y)
+        selector_b = TimeSeriesFeatureSelector(strategy="rfecv", random_state=42).fit(X, y)
+
+        assert np.array_equal(selector_a.selected_indices_, selector_b.selected_indices_)
+
+    def test_matches_plain_sklearn_rfecv(self):
+        """Corretude: o resultado deve ser identico a usar RFECV puro do
+        sklearn com os mesmos hiperparametros (nao uma reimplementacao propria)."""
+        from sklearn.feature_selection import RFECV
+
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        expected = RFECV(
+            RandomForestRegressor(random_state=0),
+            cv=TimeSeriesSplit(n_splits=3),
+            step=1,
+            min_features_to_select=1,
+        ).fit(X, y)
+        expected_indices = np.sort(np.where(expected.support_)[0])
+
+        selector = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X, y)
+
+        assert np.array_equal(selector.selected_indices_, expected_indices)
+
+    def test_k_parameter_is_ignored_for_this_strategy(self):
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector_k1 = TimeSeriesFeatureSelector(strategy="rfecv", k=1, random_state=0).fit(X, y)
+        selector_k7 = TimeSeriesFeatureSelector(strategy="rfecv", k=7, random_state=0).fit(X, y)
+
+        assert np.array_equal(selector_k1.selected_indices_, selector_k7.selected_indices_)
+
+    def test_number_of_selected_features_varies_with_data_sparsity(self):
+        X_sparse, y_sparse = _synthetic_sparse_linear_data(n_features=10, n_informative=2, seed=0)
+        X_dense, y_dense = _synthetic_sparse_linear_data(n_features=10, n_informative=8, seed=0)
+
+        selector_sparse = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X_sparse, y_sparse)
+        selector_dense = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X_dense, y_dense)
+
+        assert selector_sparse.selected_indices_.shape[0] != selector_dense.selected_indices_.shape[0]
+
+    def test_falls_back_to_the_single_feature_when_only_one_candidate_exists(self):
+        """Achado do brainstorming da Tarefa 4 (reproduzido com sklearn real
+        antes de implementar): RFECV levanta ValueError com 'Found array with
+        1 feature(s)... while a minimum of 2 is required' quando X tem 1 unica
+        coluna -- caso real de austres.txt (N_Features_Total=1, Tarefa 3.2).
+        A guarda decidida com o pesquisador: manter a unica feature
+        trivialmente, sem chamar RFECV, mesmo invariante das outras 4
+        estrategias (pelo menos 1 feature sempre sobrevive, nunca crasha)."""
+        X = np.random.RandomState(0).normal(size=(80, 1))
+        y = np.random.RandomState(1).normal(size=80)
+
+        selector = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X, y)
+
+        assert selector.selected_indices_.tolist() == [0]
+        assert selector.fallback_triggered_ is True
+
+    def test_falls_back_using_real_austres_data_with_lag_size_one(self):
+        """Fecha a lacuna apontada por code-review (angulo line-by-line,
+        Tarefa 4): o cenario real que motivou a guarda (austres.txt,
+        N_Features_Total=1 via lag_size='auto', Tarefa 3.2) precisa ser
+        exercitado end-to-end pelo pipeline de producao
+        (open_format_train_val_test -> create_windowing), nao so por dado
+        sintetico -- o fixture generico (fs_dev_series_train_data) usa
+        k_lags=5 fixo e nunca aciona esta guarda."""
+        X_train, y_train = load_fs_dev_series_train_data("austres", k_lags=1)
+        assert X_train.shape[1] == 1  # confirma que o cenario real foi reproduzido
+
+        selector = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X_train, y_train)
+
+        assert selector.selected_indices_.tolist() == [0]
+        assert selector.fallback_triggered_ is True
+
+    def test_raises_clear_error_instead_of_silent_invalid_index_when_zero_features(self):
+        """Achado de code-review (angulos line-by-line + altitude, Tarefa 4):
+        a guarda original testava `X.shape[1] < 2`, cobrindo tanto 0 quanto 1
+        feature com o mesmo `np.array([0])` -- para 0 features esse indice
+        nao existe, e o erro so apareceria depois, dentro de transform()
+        (IndexError), longe da causa raiz. 0 features e um estado
+        estruturalmente invalido (nao acontece via create_windowing hoje,
+        lag_size sempre >=1) -- deve falhar alto e claro, nao ser tratado
+        como o mesmo caso de negocio legitimo que 1 feature."""
+        X = np.zeros((80, 0))
+        y = np.zeros(80)
+
+        with pytest.raises(ValueError, match="0 feature"):
+            TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X, y)
+
+    def test_fallback_triggered_is_false_when_rfecv_genuinely_runs(self):
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+
+        selector = TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X, y)
+
+        assert selector.fallback_triggered_ is False
+
+    def test_cv_is_time_series_split_never_kfold(self, monkeypatch):
+        """Regra nao-negociavel do PLANO_ARQUITETURA.md (Secao 2, metodo #5)
+        e reforcada explicitamente no prompt da Tarefa 4: RFECV e o metodo
+        mais caro e mais facil de configurar errado -- espiona RFECV e
+        confirma o tipo exato do cv recebido."""
+        X, y = _synthetic_nonlinear_data(n_features=8, informative_idx=0)
+        captured = {}
+
+        from sklearn.feature_selection import RFECV as real_RFECV
+
+        def spy_rfecv(*args, **kwargs):
+            captured["cv"] = kwargs.get("cv")
+            return real_RFECV(*args, **kwargs)
+
+        monkeypatch.setattr("model.feature_selection.RFECV", spy_rfecv)
+
+        TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X, y)
+
+        assert isinstance(captured["cv"], TimeSeriesSplit)
+        assert not isinstance(captured["cv"], KFold)
+
+    def test_fit_only_ever_scores_the_exact_rows_it_was_given(self, monkeypatch):
+        """Mesma prova mecanica de Zero Data Leakage usada para f_test/lasso,
+        aplicada ao rfecv -- o metodo mais caro e com CV interna (RFECV chama
+        RandomForestRegressor.fit() muitas vezes: por fold x por rodada de
+        eliminacao), portanto o de maior risco de vazamento indireto. Captura
+        TODAS as chamadas internas (nao so a ultima) e prova que nenhuma
+        jamais viu uma linha fora de X_train/y_train."""
+        X_train, y_train = _synthetic_linear_data(n_samples=50, n_features=6, seed=1)
+        calls = []
+
+        real_random_forest = RandomForestRegressor
+
+        class SpyRandomForestRegressor(real_random_forest):
+            def fit(self, X, y, **kwargs):
+                calls.append((np.array(X, copy=True), np.array(y, copy=True)))
+                return super().fit(X, y, **kwargs)
+
+        monkeypatch.setattr("model.feature_selection.RandomForestRegressor", SpyRandomForestRegressor)
+
+        TimeSeriesFeatureSelector(strategy="rfecv", random_state=0).fit(X_train, y_train)
+
+        assert len(calls) > 0
+        y_train_rounded = set(np.round(y_train, 8).tolist())
+        for captured_X, captured_y in calls:
+            # cada fit interno recebe um SUBCONJUNTO de linhas de X_train/y_train
+            # (o fold da TimeSeriesSplit) -- nunca mais linhas, nunca outras
+            # linhas. Colunas podem ser MENOS que X_train (RFE elimina
+            # features ao longo das rodadas -- isso e esperado, nao vazamento).
+            assert captured_X.shape[0] <= X_train.shape[0]
+            assert captured_X.shape[1] <= X_train.shape[1]
+            assert set(np.round(captured_y, 8).tolist()) <= y_train_rounded
+
+
 class TestSklearnContract:
     def test_get_params_returns_exactly_constructor_args(self):
         selector = TimeSeriesFeatureSelector(strategy="f_test", k=4)
@@ -364,12 +533,16 @@ class TestRealSeriesData:
         assert np.all((selector.selected_indices_ >= 0) & (selector.selected_indices_ < X_train.shape[1]))
         assert X_transformed.shape == (X_train.shape[0], k)
 
-    @pytest.mark.parametrize("strategy", ["rf_embedded", "lasso"])
+    @pytest.mark.parametrize("strategy", ["rf_embedded", "lasso", "rfecv"])
     def test_fit_transform_succeeds_on_real_series_lags_variable_count(self, fs_dev_series_train_data, strategy):
-        """rf_embedded/lasso (Tarefa 3.1): a contagem selecionada e decidida
-        pelo SelectFromModel, nao por `k` -- so validamos que fica dentro do
-        intervalo valido [1, n_features_total] e que transform() e
-        consistente com selected_indices_."""
+        """rf_embedded/lasso (Tarefa 3.1) e rfecv (Tarefa 4): a contagem
+        selecionada e decidida pelo proprio ajuste (SelectFromModel/RFECV),
+        nao por `k` -- so validamos que fica dentro do intervalo valido
+        [1, n_features_total] e que transform() e consistente com
+        selected_indices_. Roda inclusive contra austres.txt (via
+        fs_dev_series_train_data, k_lags=5 fixo no fixture -- nao aciona a
+        guarda de 1-feature deste teste, que e coberta separadamente em
+        TestRfecvStrategy)."""
         X_train, y_train = fs_dev_series_train_data
 
         selector = TimeSeriesFeatureSelector(strategy=strategy, random_state=0).fit(X_train, y_train)
@@ -426,7 +599,10 @@ class TestFallbackTriggeredAttribute:
     def test_always_false_for_filter_strategies(self, strategy):
         """f_test/mutual_info nao tem conceito de fallback -- sempre mantem
         exatamente k features por construcao, entao o atributo existe (para
-        uso uniforme por quem consome as 4 estrategias) mas e sempre False."""
+        uso uniforme por quem consome as 5 estrategias) mas e sempre False.
+        rfecv tem sua PROPRIA semantica de fallback (guarda de <2 features,
+        nao "corte zerado" como rf_embedded/lasso) -- coberta separadamente
+        em TestRfecvStrategy, nao duplicada aqui."""
         X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
 
         selector = TimeSeriesFeatureSelector(strategy=strategy, k=2, random_state=0).fit(X, y)
@@ -438,10 +614,10 @@ class TestNFeaturesInAttribute:
     """Tarefa 3.1, Parte C: o script de extracao de features selecionadas
     (src/utils/export_selected_features.py) precisa saber o total de
     features candidatas (n_features_total), nao so as selecionadas -- exposto
-    de forma uniforme nas 4 estrategias via `n_features_in_` (convencao
+    de forma uniforme nas 5 estrategias via `n_features_in_` (convencao
     sklearn), setado a partir de X.shape[1] em fit()."""
 
-    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info", "rf_embedded", "lasso"])
+    @pytest.mark.parametrize("strategy", ["f_test", "mutual_info", "rf_embedded", "lasso", "rfecv"])
     def test_n_features_in_matches_input_column_count(self, strategy):
         X, y = _synthetic_linear_data(n_features=8, informative_idx=(0, 3))
 

@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Repeticao,Strategy,N_Features_Selected,N_Features_Total,Selected_Indices,Selected_Lag_Names
+chamados_v4_fs_arimasvr_rfembedded,airlines,1asrfembedded,0,rf_embedded,9,20,0;2;4;7;8;13;14;16;18,lag_20;lag_18;lag_16;lag_13;lag_12;lag_7;lag_6;lag_4;lag_2
+chamados_v4_fs_arimasvr_rfembedded,austres,1asrfembedded,0,rf_embedded,1,1,0,lag_1
+chamados_v4_fs_arimasvr_rfembedded,coloradoRiver,1asrfembedded,0,rf_embedded,4,16,3;4;5;15,lag_13;lag_12;lag_11;lag_1
+chamados_v4_fs_arimasvr_rfembedded,sunspot,1asrfembedded,0,rf_embedded,4,9,0;5;7;8,lag_9;lag_4;lag_2;lag_1

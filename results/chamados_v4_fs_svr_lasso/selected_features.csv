@@ -1,0 +1,5 @@
+ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_std,N_Repeticoes,N_Features_Total
+chamados_v4_fs_svr_lasso,airlines,1svrlasso,lasso,7.000000,,1,20
+chamados_v4_fs_svr_lasso,austres,1svrlasso,lasso,1.000000,,1,1
+chamados_v4_fs_svr_lasso,coloradoRiver,1svrlasso,lasso,15.000000,,1,16
+chamados_v4_fs_svr_lasso,sunspot,1svrlasso,lasso,6.000000,,1,9
