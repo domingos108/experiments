@@ -5,7 +5,7 @@ chat, sem depender do histórico de conversa. Deve ser mantido atualizado a cada
 concluída (ou pausada) — é o complemento "estado atual" ao lado de CLAUDE.md (regras) e
 PLANO_ARQUITETURA.md (arquitetura/roadmap).
 
-**Última atualização:** 2026-07-22, ao final do portão de validação final — **matriz 5×5 completa e validada** (5 famílias × 5 métodos de FS, todas executadas e conferidas).
+**Última atualização:** 2026-07-22, ao final da Tarefa 7.2 — auditoria de integridade automatizada da matriz 5×5 completa (486 PASS, 0 FAIL, 0 ATENÇÃO).
 **Branch/estado do Git no momento desta pausa:** `joao_lucas_experiments`. Working tree com
 mudanças das Tarefas 3.1 a 3.4 **não commitadas** (ver Seções 2, 2b e 2c) — o commit `98eccef`
 ("Runbook and checkpoints added") já continha o estado da Tarefa 3 completo; tudo abaixo dele
@@ -41,6 +41,7 @@ mudanças das Tarefas 3.1 a 3.4 **não commitadas** (ver Seções 2, 2b e 2c) �
 | 7-gate | Portão de validação SVR single (estrutura + comparação rápida) antes da Tarefa 7 (ARIMA-SVR) | ✅ Concluída | `svr_exec.ipynb` confirmado no-op seguro (mtime idêntico ao pré-sessão); 20 `.pkl` validados (grid `C`/`gamma`/`kernel`/`epsilon`/`tol` com paridade ao baseline, `diff_kpss=True`, `n_reps=1`, sem contaminação de outras famílias); 5 baselines protegidos intactos; `results/chamados_v4_fs_svr_comparison.csv` + `notebook/compare_fs_results_svr.ipynb` novos |
 | 7 | Generalizar FS para `ARIMA-SVR`, última família da matriz (5×5) | ✅ Concluída e **executada pelo pesquisador** | Compatibilidade `Additive`+`Pipeline([selector,SVR])` confirmada com teste real (`tests/model/test_hybrid_system_exp.py`); `lag_size='auto'` medido idêntico ao ARIMA-MLP (resíduo independe do estimador); grid extraído de `arima_svr.ipynb`; 5 notebooks em `notebook/residual_hydridsystem/arima_svr_<estrategia>.ipynb`, `chamados_v4_fs_arimasvr_<estrategia>`; nota PROVISÓRIA sobre `gamma='auto'` documentada (PLANO_ARQUITETURA.md Seção 1.11) |
 | 8-gate | Portão de validação final ARIMA-SVR — **matriz 5×5 completa** (5 famílias × 5 métodos) | ✅ Concluída | 20 `.pkl` validados (grid `C`/`gamma`/`kernel`/`epsilon`/`tol` com paridade total, `diff_kpss=False`, `linear_model_name='1arima'`, `n_reps=1`, sem contaminação); 5 baselines protegidos intactos; `results/chamados_v4_fs_arimasvr_comparison.csv` + `notebook/compare_fs_results_arimasvr.ipynb` novos; `tests/model/test_hybrid_system_exp.py` confirmado como arquivo novo (2 testes, pré-check da Tarefa 7, sem mudança de produção) |
+| 7.2 | Auditoria de integridade metodológica única, reutilizável e permanente (5 baselines + 20 experimentos) | ✅ Concluída | `src/utils/audit_experiment_integrity.py` novo (TDD, 33 testes); `results/integrity_audit_report_v1.md` — **486 PASS, 0 FAIL, 0 ATENÇÃO, 8 N/A** (N/A = baseline ARIMA, sem `experiment_params`/estimador sklearn); `data/result/chamados_baseline_reference_hashes.json` novo (referência de hash reutilizável); 1 bug real encontrado e corrigido no próprio script de auditoria durante a execução (spy de `LassoCV` como subclasse quebrava `clone()` interno do `SelectFromModel`, mascarado por um `except Exception` que engolia o erro — corrigido para spy funcional, igual ao já usado para `RFECV`) |
 
 ---
 

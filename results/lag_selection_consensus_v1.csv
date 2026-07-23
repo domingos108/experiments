@@ -1,0 +1,97 @@
+Familia,Serie,Metodo_FS,N_Features_Selected,N_Features_Total,Selected_Lag_Names,Frequencia_Selecao,Source_File,Trivial
+MLP,airlines,sem_FS,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,False
+MLP,airlines,ftest,5,20,"lag_14,lag_13,lag_12,lag_11,lag_1",10/10,results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,False
+MLP,airlines,mutualinfo,9,20,"lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mlp_mutualinfo/selected_features_detail.csv,False
+MLP,airlines,rfembedded,1,20,lag_12,8/10,results/chamados_v4_fs_mlp_rfembedded/selected_features_detail.csv,False
+MLP,airlines,lasso,14,20,"lag_18,lag_16,lag_14,lag_13,lag_12,lag_11,lag_10,lag_8,lag_7,lag_6,lag_5,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mlp_lasso/selected_features_detail.csv,False
+MLP,airlines,rfecv,3,20,"lag_12,lag_11,lag_1",4/10,results/chamados_v4_fs_mlp_rfecv/selected_features_detail.csv,False
+MLP,austres,sem_FS,1,1,lag_1,N/A (sem selecao aplicada),results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,True
+MLP,austres,ftest,1,1,lag_1,10/10,results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,True
+MLP,austres,mutualinfo,1,1,lag_1,10/10,results/chamados_v4_fs_mlp_mutualinfo/selected_features_detail.csv,True
+MLP,austres,rfembedded,1,1,lag_1,10/10,results/chamados_v4_fs_mlp_rfembedded/selected_features_detail.csv,True
+MLP,austres,lasso,1,1,lag_1,10/10,results/chamados_v4_fs_mlp_lasso/selected_features_detail.csv,True
+MLP,austres,rfecv,1,1,lag_1,10/10,results/chamados_v4_fs_mlp_rfecv/selected_features_detail.csv,True
+MLP,coloradoRiver,sem_FS,16,16,"lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,False
+MLP,coloradoRiver,ftest,9,16,"lag_16,lag_13,lag_12,lag_11,lag_8,lag_7,lag_6,lag_5,lag_1",10/10,results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,False
+MLP,coloradoRiver,mutualinfo,1,16,lag_1,7/10,results/chamados_v4_fs_mlp_mutualinfo/selected_features_detail.csv,False
+MLP,coloradoRiver,rfembedded,2,16,"lag_12,lag_1",10/10,results/chamados_v4_fs_mlp_rfembedded/selected_features_detail.csv,False
+MLP,coloradoRiver,lasso,7,16,"lag_14,lag_12,lag_11,lag_9,lag_7,lag_6,lag_1",10/10,results/chamados_v4_fs_mlp_lasso/selected_features_detail.csv,False
+MLP,coloradoRiver,rfecv,3,16,"lag_16,lag_12,lag_1",4/10,results/chamados_v4_fs_mlp_rfecv/selected_features_detail.csv,False
+MLP,sunspot,sem_FS,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,False
+MLP,sunspot,ftest,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mlp_ftest/selected_features_detail.csv,False
+MLP,sunspot,mutualinfo,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mlp_mutualinfo/selected_features_detail.csv,False
+MLP,sunspot,rfembedded,1,9,lag_1,10/10,results/chamados_v4_fs_mlp_rfembedded/selected_features_detail.csv,False
+MLP,sunspot,lasso,6,9,"lag_9,lag_8,lag_5,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mlp_lasso/selected_features_detail.csv,False
+MLP,sunspot,rfecv,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",3/10,results/chamados_v4_fs_mlp_rfecv/selected_features_detail.csv,False
+SVR,airlines,sem_FS,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,False
+SVR,airlines,ftest,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,False
+SVR,airlines,mutualinfo,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_mutualinfo/selected_features_detail.csv,False
+SVR,airlines,rfembedded,1,20,lag_12,1/1,results/chamados_v4_fs_svr_rfembedded/selected_features_detail.csv,False
+SVR,airlines,lasso,7,20,"lag_13,lag_12,lag_11,lag_10,lag_8,lag_7,lag_5",1/1,results/chamados_v4_fs_svr_lasso/selected_features_detail.csv,False
+SVR,airlines,rfecv,2,20,"lag_15,lag_12",1/1,results/chamados_v4_fs_svr_rfecv/selected_features_detail.csv,False
+SVR,austres,sem_FS,1,1,lag_1,N/A (sem selecao aplicada),results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,True
+SVR,austres,ftest,1,1,lag_1,1/1,results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,True
+SVR,austres,mutualinfo,1,1,lag_1,1/1,results/chamados_v4_fs_svr_mutualinfo/selected_features_detail.csv,True
+SVR,austres,rfembedded,1,1,lag_1,1/1,results/chamados_v4_fs_svr_rfembedded/selected_features_detail.csv,True
+SVR,austres,lasso,1,1,lag_1,1/1,results/chamados_v4_fs_svr_lasso/selected_features_detail.csv,True
+SVR,austres,rfecv,1,1,lag_1,1/1,results/chamados_v4_fs_svr_rfecv/selected_features_detail.csv,True
+SVR,coloradoRiver,sem_FS,16,16,"lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,False
+SVR,coloradoRiver,ftest,5,16,"lag_14,lag_13,lag_12,lag_3,lag_2",1/1,results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,False
+SVR,coloradoRiver,mutualinfo,9,16,"lag_15,lag_14,lag_12,lag_10,lag_7,lag_5,lag_4,lag_3,lag_2",1/1,results/chamados_v4_fs_svr_mutualinfo/selected_features_detail.csv,False
+SVR,coloradoRiver,rfembedded,4,16,"lag_12,lag_10,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_rfembedded/selected_features_detail.csv,False
+SVR,coloradoRiver,lasso,15,16,"lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_lasso/selected_features_detail.csv,False
+SVR,coloradoRiver,rfecv,14,16,"lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_rfecv/selected_features_detail.csv,False
+SVR,sunspot,sem_FS,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,False
+SVR,sunspot,ftest,5,9,"lag_9,lag_6,lag_5,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_ftest/selected_features_detail.csv,False
+SVR,sunspot,mutualinfo,5,9,"lag_9,lag_6,lag_5,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_mutualinfo/selected_features_detail.csv,False
+SVR,sunspot,rfembedded,1,9,lag_1,1/1,results/chamados_v4_fs_svr_rfembedded/selected_features_detail.csv,False
+SVR,sunspot,lasso,6,9,"lag_9,lag_8,lag_5,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_lasso/selected_features_detail.csv,False
+SVR,sunspot,rfecv,8,9,"lag_9,lag_8,lag_7,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_svr_rfecv/selected_features_detail.csv,False
+ARIMA-MLP,airlines,sem_FS,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_ftest/selected_features_detail.csv,False
+ARIMA-MLP,airlines,ftest,5,20,"lag_20,lag_16,lag_13,lag_2,lag_1",10/10,results/chamados_v4_fs_ftest/selected_features_detail.csv,False
+ARIMA-MLP,airlines,mutualinfo,9,20,"lag_19,lag_18,lag_17,lag_14,lag_12,lag_5,lag_4,lag_2,lag_1",10/10,results/chamados_v4_fs_mutualinfo/selected_features_detail.csv,False
+ARIMA-MLP,airlines,rfembedded,8,20,"lag_20,lag_18,lag_13,lag_12,lag_7,lag_6,lag_4,lag_2",2/10,results/chamados_v4_fs_rfembedded/selected_features_detail.csv,False
+ARIMA-MLP,airlines,lasso,1,20,lag_20,10/10,results/chamados_v4_fs_lasso/selected_features_detail.csv,False
+ARIMA-MLP,airlines,rfecv,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",4/10,results/chamados_v4_fs_rfecv/selected_features_detail.csv,False
+ARIMA-MLP,austres,sem_FS,1,1,lag_1,N/A (sem selecao aplicada),results/chamados_v4_fs_ftest/selected_features_detail.csv,True
+ARIMA-MLP,austres,ftest,1,1,lag_1,10/10,results/chamados_v4_fs_ftest/selected_features_detail.csv,True
+ARIMA-MLP,austres,mutualinfo,1,1,lag_1,10/10,results/chamados_v4_fs_mutualinfo/selected_features_detail.csv,True
+ARIMA-MLP,austres,rfembedded,1,1,lag_1,10/10,results/chamados_v4_fs_rfembedded/selected_features_detail.csv,True
+ARIMA-MLP,austres,lasso,1,1,lag_1,10/10,results/chamados_v4_fs_lasso/selected_features_detail.csv,True
+ARIMA-MLP,austres,rfecv,1,1,lag_1,10/10,results/chamados_v4_fs_rfecv/selected_features_detail.csv,True
+ARIMA-MLP,coloradoRiver,sem_FS,16,16,"lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_ftest/selected_features_detail.csv,False
+ARIMA-MLP,coloradoRiver,ftest,9,16,"lag_16,lag_13,lag_11,lag_10,lag_9,lag_8,lag_6,lag_3,lag_2",10/10,results/chamados_v4_fs_ftest/selected_features_detail.csv,False
+ARIMA-MLP,coloradoRiver,mutualinfo,15,16,"lag_16,lag_15,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mutualinfo/selected_features_detail.csv,False
+ARIMA-MLP,coloradoRiver,rfembedded,4,16,"lag_13,lag_12,lag_11,lag_1",10/10,results/chamados_v4_fs_rfembedded/selected_features_detail.csv,False
+ARIMA-MLP,coloradoRiver,lasso,1,16,lag_11,10/10,results/chamados_v4_fs_lasso/selected_features_detail.csv,False
+ARIMA-MLP,coloradoRiver,rfecv,14,16,"lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_3,lag_2,lag_1",1/10,results/chamados_v4_fs_rfecv/selected_features_detail.csv,False
+ARIMA-MLP,sunspot,sem_FS,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_ftest/selected_features_detail.csv,False
+ARIMA-MLP,sunspot,ftest,5,9,"lag_9,lag_8,lag_5,lag_4,lag_3",10/10,results/chamados_v4_fs_ftest/selected_features_detail.csv,False
+ARIMA-MLP,sunspot,mutualinfo,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",10/10,results/chamados_v4_fs_mutualinfo/selected_features_detail.csv,False
+ARIMA-MLP,sunspot,rfembedded,4,9,"lag_9,lag_4,lag_2,lag_1",10/10,results/chamados_v4_fs_rfembedded/selected_features_detail.csv,False
+ARIMA-MLP,sunspot,lasso,2,9,"lag_9,lag_4",10/10,results/chamados_v4_fs_lasso/selected_features_detail.csv,False
+ARIMA-MLP,sunspot,rfecv,8,9,"lag_9,lag_8,lag_7,lag_6,lag_4,lag_3,lag_2,lag_1",3/10,results/chamados_v4_fs_rfecv/selected_features_detail.csv,False
+ARIMA-SVR,airlines,sem_FS,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,False
+ARIMA-SVR,airlines,ftest,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,False
+ARIMA-SVR,airlines,mutualinfo,20,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_mutualinfo/selected_features_detail.csv,False
+ARIMA-SVR,airlines,rfembedded,9,20,"lag_20,lag_18,lag_16,lag_13,lag_12,lag_7,lag_6,lag_4,lag_2",1/1,results/chamados_v4_fs_arimasvr_rfembedded/selected_features_detail.csv,False
+ARIMA-SVR,airlines,lasso,1,20,lag_20,1/1,results/chamados_v4_fs_arimasvr_lasso/selected_features_detail.csv,False
+ARIMA-SVR,airlines,rfecv,18,20,"lag_20,lag_19,lag_18,lag_17,lag_16,lag_15,lag_13,lag_12,lag_11,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_rfecv/selected_features_detail.csv,False
+ARIMA-SVR,austres,sem_FS,1,1,lag_1,N/A (sem selecao aplicada),results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,True
+ARIMA-SVR,austres,ftest,1,1,lag_1,1/1,results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,True
+ARIMA-SVR,austres,mutualinfo,1,1,lag_1,1/1,results/chamados_v4_fs_arimasvr_mutualinfo/selected_features_detail.csv,True
+ARIMA-SVR,austres,rfembedded,1,1,lag_1,1/1,results/chamados_v4_fs_arimasvr_rfembedded/selected_features_detail.csv,True
+ARIMA-SVR,austres,lasso,1,1,lag_1,1/1,results/chamados_v4_fs_arimasvr_lasso/selected_features_detail.csv,True
+ARIMA-SVR,austres,rfecv,1,1,lag_1,1/1,results/chamados_v4_fs_arimasvr_rfecv/selected_features_detail.csv,True
+ARIMA-SVR,coloradoRiver,sem_FS,16,16,"lag_16,lag_15,lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,False
+ARIMA-SVR,coloradoRiver,ftest,9,16,"lag_16,lag_13,lag_11,lag_10,lag_9,lag_8,lag_6,lag_3,lag_2",1/1,results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,False
+ARIMA-SVR,coloradoRiver,mutualinfo,1,16,lag_12,1/1,results/chamados_v4_fs_arimasvr_mutualinfo/selected_features_detail.csv,False
+ARIMA-SVR,coloradoRiver,rfembedded,4,16,"lag_13,lag_12,lag_11,lag_1",1/1,results/chamados_v4_fs_arimasvr_rfembedded/selected_features_detail.csv,False
+ARIMA-SVR,coloradoRiver,lasso,1,16,lag_11,1/1,results/chamados_v4_fs_arimasvr_lasso/selected_features_detail.csv,False
+ARIMA-SVR,coloradoRiver,rfecv,9,16,"lag_14,lag_13,lag_12,lag_11,lag_10,lag_9,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_rfecv/selected_features_detail.csv,False
+ARIMA-SVR,sunspot,sem_FS,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",N/A (sem selecao aplicada),results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,False
+ARIMA-SVR,sunspot,ftest,1,9,lag_9,1/1,results/chamados_v4_fs_arimasvr_ftest/selected_features_detail.csv,False
+ARIMA-SVR,sunspot,mutualinfo,9,9,"lag_9,lag_8,lag_7,lag_6,lag_5,lag_4,lag_3,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_mutualinfo/selected_features_detail.csv,False
+ARIMA-SVR,sunspot,rfembedded,4,9,"lag_9,lag_4,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_rfembedded/selected_features_detail.csv,False
+ARIMA-SVR,sunspot,lasso,2,9,"lag_9,lag_4",1/1,results/chamados_v4_fs_arimasvr_lasso/selected_features_detail.csv,False
+ARIMA-SVR,sunspot,rfecv,4,9,"lag_9,lag_4,lag_2,lag_1",1/1,results/chamados_v4_fs_arimasvr_rfecv/selected_features_detail.csv,False
