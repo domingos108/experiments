@@ -1,5 +1,7 @@
 ExperimentID,Serie,Modelo,N_Repeticoes,MSE_mean,MSE_std,RMSE_mean,RMSE_std,MAE_mean,MAE_std,MAPE_mean,MAPE_std,theil_mean,theil_std,ARV_mean,ARV_std,IA_mean,IA_std,POCID_mean,POCID_std
 chamados_v4_fs_svr_mutualinfo,airlines,1svrmutualinfo,1,375.843583,,19.386686,,13.856390,,3.111161,,0.118322,,0.053837,,0.985155,,78.571429,
 chamados_v4_fs_svr_mutualinfo,austres,1svrmutualinfo,1,193.564723,,13.912754,,10.314447,,0.058814,,0.081070,,0.018572,,0.995194,,87.500000,
-chamados_v4_fs_svr_mutualinfo,coloradoRiver,1svrmutualinfo,1,0.024394,,0.156187,,0.124457,,15.681745,,0.814711,,0.669642,,0.836238,,60.810811,
+chamados_v4_fs_svr_mutualinfo,coloradoRiver,1svrmutualinfo,1,0.025764,,0.160513,,0.126953,,15.978500,,0.832784,,0.683528,,0.829075,,59.459459,
+chamados_v4_fs_svr_mutualinfo,samurec,1svrmutualinfo,1,50.681190,,7.119072,,5.857553,,20.370258,,11.623871,,8.823178,,0.338869,,44.915254,
 chamados_v4_fs_svr_mutualinfo,sunspot,1svrmutualinfo,1,640.081539,,25.299833,,19.416696,,39.651643,,0.693393,,0.365288,,0.910635,,82.142857,
+chamados_v4_fs_svr_mutualinfo,windspeedfortaleza,1svrmutualinfo,1,0.152974,,0.391119,,0.340808,,12.235827,,1.129094,,0.370737,,0.916192,,57.142857,

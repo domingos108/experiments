@@ -35,6 +35,12 @@ BASE_NAME_LIST = [
     #'temperature.txt',
     #'Unemployment.txt',
     #'woolyrnq.txt',
+
+    # --- Series de diversificacao (2026-08-28): entram na matriz FS junto das 4
+    # FS_DEV_SERIES. taylor.txt fica de fora desta leva (N=4032 x janela 336 --
+    # rodada dedicada, ver CLAUDE.md 3.8).
+    'windspeedfortaleza.txt',
+    'samurec.txt',
 ]
 
 LAG_SIZE_LIST = []
@@ -52,7 +58,9 @@ LAG_SIZE_LIST = []
 # no fallback (lag_size), identico ao baseline.
 BASE_INFORMATION = {
     'marecacc.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
- 
+
+    'samurec.txt': {"freq": "D", "m": 7, "lag_size": "auto"},
+
     'majaboataosamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
     'maolindasamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
     'mapaulistasamu.txt': {"freq": "D", 'm': 7 , 'lag_size': 7},
@@ -60,7 +68,7 @@ BASE_INFORMATION = {
 
     'windspeedrecife.txt': {"freq": "MS", 'm': 12, 'lag_size': 12 }, 
     'windspeednatal.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  }, 
-    'windspeedfortaleza.txt': {"freq": "MS", 'm': 12 , 'lag_size': 12 }, 
+    'windspeedfortaleza.txt': {"freq": "MS", 'm': 12 , 'lag_size': 'auto' },   # 'auto' (nao 12 fixo) desde 2026-08-28: entra na matriz FS, PACF ~10 lags signif. ate lag 20
 
     'irradiancesalvador.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto' }, 
     'irradiancefortaleza.txt': {"freq": "D", 'm': 7, 'lag_size': 'auto'  }, 
@@ -71,7 +79,8 @@ BASE_INFORMATION = {
     'airlines.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
     'lakeerie.txt':     {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
     'lynx.txt':         {"freq": "YE",  'm': 1,  'lag_size': 'auto'},   # provisório
-    'taylor.txt':       {"freq": "MS",  'm': 12, 'lag_size': 'auto'},   # provisório
+    #'taylor.txt':       {"freq": "MS",  'm': 12, 'lag_size': 'auto'},
+    'taylor.txt':       {"freq": "30min", 'm': 48, 'lag_size': 336},
 
     'coloradoRiver.txt': {"freq": "MS", 'm': 12, 'lag_size': 'auto' },
     'sunspot.txt': {"freq": "YE", 'm': 1, 'lag_size': 'auto'  },

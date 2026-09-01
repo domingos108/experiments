@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-07-22T02:10:08.032969",
-  "note": "Referencia de hash dos 5 baselines protegidos (CLAUDE.md Secao 3), gerada apos confirmacao de que activation='logistic' (1amv1, Tarefa 3.9) e diff_kpss=False (1mlp, Tarefa 5.1) estao corretos. Regenerar SOMENTE apos uma regeneracao legitima de baseline, documentada no CLAUDE.md/CHECKPOINTS.md -- nunca silenciosamente.",
+  "note": "Referencia de hash dos 5 baselines protegidos (CLAUDE.md Secao 3), gerada apos confirmacao de que activation='logistic' (1amv1, Tarefa 3.9) e diff_kpss=False (1mlp, Tarefa 5.1) estao corretos. Regenerar SOMENTE apos uma regeneracao legitima de baseline, documentada no CLAUDE.md/CHECKPOINTS.md -- nunca silenciosamente. | 2026-08-28: removidas as 5 entradas taylor_*.pkl -- a entrada de taylor.txt em BASE_INFORMATION foi corrigida (MS/m=12/auto -> 30min/m=48/336; ver CLAUDE.md Secao 3.8) e os baselines antigos, mal-especificados, foram arquivados em chamados_taylor_wrongconfig_archive_20260828/. taylor sai da referencia protegida ate ser regenerado sob o config correto.",
   "files": {
     "airlines_1amv1.pkl": "271286753ef062ea6d609e18ffbabb5487f894386c00af1e4cd44c9ca22bf009",
     "airlines_1arima.pkl": "46af1fbb666d868c9e4d71d2cf263b1a89e58bbda5adff371b9d4d1d5d246c1e",
@@ -67,11 +67,6 @@
     "sunspot_1as.pkl": "05e78660bbf3fc8519d2383ed8f3df9d34617de82748fb56b769f890e91eb83c",
     "sunspot_1mlp.pkl": "58795d319ad1bae1fc349ba913fcd7d8f65ac738e2937f6d12f5719e5253e382",
     "sunspot_1svr.pkl": "ad1749b645e3d44cfe60d27e9656d11c15980399758ca6efd396ab8bda52d832",
-    "taylor_1amv1.pkl": "3454f1fd88fc244a3b2838e65a03327af1054e6d35ce6ee4c62b25439a438ca6",
-    "taylor_1arima.pkl": "a8fef29441baf2be3940de7688c44e1d228fa5f5b9de06458f4309535479988e",
-    "taylor_1as.pkl": "1af0e52a04fa04a464b9f64cc78fc036e6458a46646ff6c3bf66b29fa2100079",
-    "taylor_1mlp.pkl": "5671e64c8ba732c5bde0f36497ec89344cc00c413ba708367ba1bd261c59e0e1",
-    "taylor_1svr.pkl": "73d92cbdc34602dd40697fdcb44dc5811bb191d96eca3d91d83857c0f6960d75",
     "temperature_1amv1.pkl": "df718524589fdcdb23a2b9b4530fd16390c98ad469b5758a02b396390ba28a18",
     "temperature_1arima.pkl": "515b4ee7d1425fba6ef0169e59cbe1b73e8dcd2797f27a81ae8efb7560a9da72",
     "temperature_1as.pkl": "be995684227b04440922505c105ada135762f1395fb802beeb2a5e86ac343d29",

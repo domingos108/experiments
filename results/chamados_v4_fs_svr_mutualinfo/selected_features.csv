@@ -2,4 +2,6 @@ ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_
 chamados_v4_fs_svr_mutualinfo,airlines,1svrmutualinfo,mutual_info,20.000000,,1,20
 chamados_v4_fs_svr_mutualinfo,austres,1svrmutualinfo,mutual_info,1.000000,,1,1
 chamados_v4_fs_svr_mutualinfo,coloradoRiver,1svrmutualinfo,mutual_info,9.000000,,1,16
+chamados_v4_fs_svr_mutualinfo,samurec,1svrmutualinfo,mutual_info,15.000000,,1,15
 chamados_v4_fs_svr_mutualinfo,sunspot,1svrmutualinfo,mutual_info,5.000000,,1,9
+chamados_v4_fs_svr_mutualinfo,windspeedfortaleza,1svrmutualinfo,mutual_info,5.000000,,1,20

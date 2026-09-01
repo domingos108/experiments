@@ -5,7 +5,7 @@ chat, sem depender do histórico de conversa. Deve ser mantido atualizado a cada
 concluída (ou pausada) — é o complemento "estado atual" ao lado de CLAUDE.md (regras) e
 PLANO_ARQUITETURA.md (arquitetura/roadmap).
 
-**Última atualização:** 2026-07-22, ao final da Tarefa 7.2 — auditoria de integridade automatizada da matriz 5×5 completa (486 PASS, 0 FAIL, 0 ATENÇÃO).
+**Última atualização:** 2026-08-28 — diversificação de séries + janela heurística de percentual. (1) 3 séries novas em `config.py`/`BASE_INFORMATION`: `samurec.txt` (bruta, confirmada — `data/raw/samu/format_samu.ipynb` cell 15), `windspeedfortaleza.txt` (já existia), `taylor.txt` corrigida (`MS`/12/`auto` → `30min`/48/336; ver CLAUDE.md 3.8, baselines antigos arquivados em `chamados_taylor_wrongconfig_archive_20260828/`, removidos da referência de hash). (2) Mecanismo `resolve_lag_size_pct()` + `GridSearch(lag_size_override=...)` em `grid_search_exp.py` — via paralela aditiva à janela `'auto'`/PACF, TDD (24 testes), `resolve_lag_size()` original intocada, 214 passed. (3) PENDENTE: matriz `'auto'` das 6 séries (sem `taylor`); rodada dedicada de `taylor` com pré-check de custo de `rfecv@336`; notebooks pct10 (Parte B, adiada). Estado anterior: 2026-07-22, Tarefa 7.2 — auditoria de integridade da matriz 5×5 (486 PASS, 0 FAIL, 0 ATENÇÃO).
 **Branch/estado do Git no momento desta pausa:** `joao_lucas_experiments`. Working tree com
 mudanças das Tarefas 3.1 a 3.4 **não commitadas** (ver Seções 2, 2b e 2c) — o commit `98eccef`
 ("Runbook and checkpoints added") já continha o estado da Tarefa 3 completo; tudo abaixo dele

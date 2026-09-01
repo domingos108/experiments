@@ -162,6 +162,10 @@ Achado (família `SVR` single, Tarefa 6): `gamma='auto'` do `sklearn.svm.SVR` é
 
 **Decisão do pesquisador: manter `gamma='auto'` por ora, não fixar um valor numérico.** A ser revisada com o orientador. **Se essa decisão mudar no futuro, as famílias `SVR` single (Tarefa 6) e `ARIMA-SVR` (Tarefa 7) precisarão ser re-rodadas** — os `.pkl` já gerados/a gerar não seriam mais comparáveis a uma rodada com `gamma` fixo. Ver também CHECKPOINTS.md, "Pendências conhecidas", para o registro de acompanhamento.
 
+### 1.12 Spike — `Pipeline([selector, estimador])` em `KhasheiBijariHybrid`/`NoLiCHybrid`
+
+Investigação (não implementação) de se a mesma composição `Pipeline` validada nas Seções 1.1-1.11 (`Additive`/`SKlearnModel`, matriz 5×5 completa) funciona também nos wrappers híbridos não-aditivos, que constroem matrizes de entrada combinadas fora do fluxo padrão. Resultado, com evidência real (testes formalizados em `tests/model/test_hybrid_system_exp.py::TestKhasheiBijariHybridAcceptsPipeline`/`TestNoLiCHybridBreaksWithPipeline`): `KhasheiBijariHybrid` encaixa sem nenhuma mudança de código (mesmo padrão agnóstico `generics.fit_predict_ml_schemma`); `NoLiCHybrid` quebra no estágio combinador (M_c) — `_grid_search_mlp` monta um `GridSearchCV` interno com nomes de parâmetro do `MLPRegressor` sem prefixo `estimator__`, assumindo `self.model` bruto. Próximo passo: `KhasheiBijariHybrid` pode seguir o roteiro das Tarefas 5-7 diretamente; `NoLiCHybrid` precisa da correção nativa desenhada no spike antes de qualquer notebook de FS. Detalhe completo — incluindo a proposta de correção sem monkey patch e uma decisão de escopo em aberto (se o FS deve se propagar ao estágio combinador) — em `docs/spikes/spike_pipeline_khasheibijari_nolic.md`.
+
 ---
 
 ## 2. O Arsenal de Algoritmos
@@ -217,7 +221,9 @@ Achado (família `SVR` single, Tarefa 6): `gamma='auto'` do `sklearn.svm.SVR` é
 
 `experiment_id`: híbridos usam `chamados_v4_fs_<estrategia>`; famílias single-model usam `chamados_v4_fs_<modelo>_<estrategia>` (ex. `chamados_v4_fs_mlp_ftest`) — o segmento extra (`mlp`, e futuramente `svr`) evita colisão de nomes entre as duas famílias, que compartilham os mesmos 5 nomes de estratégia (Tarefa 5, Seção 1.8).
 
-Exemplos já existentes ou esperados pelo roadmap (Seção 2):
+Exemplos já existentes ou esperados pelo roadmap (Seção 2). Status resumido aqui — ver
+`CHECKPOINTS.md` para o histórico detalhado tarefa a tarefa (inclui os Portões de validação
+6-gate/7-gate/8-gate que confirmaram cada família):
 
 | Notebook | Arquitetura | Estratégia FS | Status |
 |---|---|---|---|
@@ -225,13 +231,9 @@ Exemplos já existentes ou esperados pelo roadmap (Seção 2):
 | `arima_mlp_mutual_info.ipynb` | ARIMA-MLP (`Additive`) | `mutual_info` | Executado (Tarefa 3.2) |
 | `arima_mlp_rf_embedded.ipynb` | ARIMA-MLP (`Additive`) | `rf_embedded` | Executado e regenerado (Tarefa 3.9) |
 | `arima_mlp_lasso.ipynb` | ARIMA-MLP (`Additive`) | `lasso` | Executado e regenerado (Tarefa 3.9) |
-| `arima_mlp_rfecv.ipynb` | ARIMA-MLP (`Additive`) | `rfecv` | Implementado, notebook pronto, **não executado** (Tarefa 4) |
-| `mlp_ftest.ipynb` | MLP single (`SKlearnModel`) | `f_test` | Notebook pronto, **não executado** (Tarefa 5) |
-| `mlp_mutual_info.ipynb` | MLP single (`SKlearnModel`) | `mutual_info` | Notebook pronto, **não executado** (Tarefa 5) |
-| `mlp_rf_embedded.ipynb` | MLP single (`SKlearnModel`) | `rf_embedded` | Notebook pronto, **não executado** (Tarefa 5) |
-| `mlp_lasso.ipynb` | MLP single (`SKlearnModel`) | `lasso` | Notebook pronto, **não executado** (Tarefa 5) |
-| `mlp_rfecv.ipynb` | MLP single (`SKlearnModel`) | `rfecv` | Notebook pronto, **não executado** (Tarefa 5) |
-| `arima_svr_ftest.ipynb` | ARIMA-SVR (`Additive`) | `f_test` | Não implementado — fora do escopo da Tarefa 5 |
-| `svr_ftest.ipynb` | SVR single (`SKlearnModel`) | `f_test` | Não implementado — fora do escopo da Tarefa 5 |
+| `arima_mlp_rfecv.ipynb` | ARIMA-MLP (`Additive`) | `rfecv` | Executado — matriz 5×5 completa confirmada no Portão 8-gate |
+| `mlp_ftest.ipynb`, `mlp_mutual_info.ipynb`, `mlp_rf_embedded.ipynb`, `mlp_lasso.ipynb`, `mlp_rfecv.ipynb` | MLP single (`SKlearnModel`) | 5 estratégias | Executados (Tarefa 5) e validados no Portão 6-gate |
+| `svr_ftest.ipynb`, `svr_mutual_info.ipynb`, `svr_rf_embedded.ipynb`, `svr_lasso.ipynb`, `svr_rfecv.ipynb` | SVR single (`SKlearnModel`) | 5 estratégias | Executados (Tarefa 6) e validados no Portão 7-gate |
+| `arima_svr_ftest.ipynb`, `arima_svr_mutual_info.ipynb`, `arima_svr_rf_embedded.ipynb`, `arima_svr_lasso.ipynb`, `arima_svr_rfecv.ipynb` | ARIMA-SVR (`Additive`) | 5 estratégias | Executados (Tarefa 7) e validados no Portão 8-gate — fecha a matriz 5×5 completa (5 famílias × 5 métodos) |
 
 Quando o roadmap evoluir para as combinações não-lineares de 2–3 estágios (`NonLinear`, Seção 4 do CLAUDE.md), o mesmo padrão se aplica trocando o prefixo do híbrido (ex. `nonlinear_mlp_ftest.ipynb`). Cada `experiment_id` usado nesses notebooks segue a regra da Seção 3.2 do CLAUDE.md (nome novo e explícito, nunca reaproveitado).

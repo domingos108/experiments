@@ -2,4 +2,6 @@ ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_
 chamados_v4_fs_svr_rfembedded,airlines,1svrrfembedded,rf_embedded,1.000000,,1,20
 chamados_v4_fs_svr_rfembedded,austres,1svrrfembedded,rf_embedded,1.000000,,1,1
 chamados_v4_fs_svr_rfembedded,coloradoRiver,1svrrfembedded,rf_embedded,4.000000,,1,16
+chamados_v4_fs_svr_rfembedded,samurec,1svrrfembedded,rf_embedded,2.000000,,1,15
 chamados_v4_fs_svr_rfembedded,sunspot,1svrrfembedded,rf_embedded,1.000000,,1,9
+chamados_v4_fs_svr_rfembedded,windspeedfortaleza,1svrrfembedded,rf_embedded,4.000000,,1,20

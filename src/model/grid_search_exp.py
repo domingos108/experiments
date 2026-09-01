@@ -36,6 +36,44 @@ def resolve_lag_size(base_info):
     return base_info["lag_size"]
 
 
+def resolve_lag_size_pct(n_obs, pct=0.10):
+    """
+    Via PARALELA e ADITIVA a resolve_lag_size(): heuristica de janela por
+    percentual fixo do tamanho da serie -- round(pct * n_obs).
+
+    NAO chama nem altera resolve_lag_size()/get_max_lag_to_consider()/
+    fs_lag_size -- e um mecanismo independente, exposto aos notebooks via
+    o parametro `lag_size_override` de GridSearch (nunca via
+    config.BASE_INFORMATION). Motivacao: comparar a janela PACF ('auto')
+    contra uma heuristica fixa, isolando exatamente essa variavel.
+
+    `n_obs`: por decisao do pesquisador (2026-08-28), o N da serie COMPLETA
+    (len de data/raw). ATENCAO -- isto NAO coincide com a base de calculo de
+    get_max_lag_to_consider: aquela funcao (input.py) computa a PACF sobre
+    ts_univariate[0:-test_size] (treino+val, exclui teste), entao o 'auto'
+    resolve a partir de N-test, nao de N total. A comparacao 'PACF vs.
+    percentual' portanto carrega essa diferenca de base (~test_size/N, i.e.
+    ~10%); se o pesquisador quiser paridade exata de base, passar
+    n_obs = N - test_size no notebook. Registrado como sub-resultado a
+    discutir (ver ambiguidade reportada na tarefa).
+
+    Ao contrario de get_max_lag_to_consider, NAO ha teto (min(20, ...)) nem
+    guarda de amostra pequena -- e proposital: o caso de uso motivador
+    (taylor, lag_size=336) exige exceder o teto de 20. A unica validacao e
+    contra entrada degenerada (n_obs<=0, pct fora de (0, 1]); nao ha como
+    esta funcao saber o tamanho do treino apos janelamento, entao uma janela
+    grande demais para a serie so falha (visivelmente) em create_windowing.
+
+    `pct` e parametrizavel para permitir rodar 0.20 depois sem nova funcao.
+    Arredondamento: round() nativo do Python (round-half-to-even).
+    """
+    if n_obs <= 0:
+        raise ValueError(f"n_obs deve ser um inteiro positivo, recebido: {n_obs!r}.")
+    if not (0 < pct <= 1):
+        raise ValueError(f"pct deve estar em (0, 1], recebido: {pct!r}.")
+    return round(pct * n_obs)
+
+
 class GridSearch:
     def __init__(self,
                  model_class_exp,
@@ -49,7 +87,8 @@ class GridSearch:
                  experiment_params = {},
                  model_exec = 10,
                  use_val_slipt_for_prev = False,
-                 save_grid_history = True
+                 save_grid_history = True,
+                 lag_size_override = None
 
         ):
         self.model_class_exp = model_class_exp
@@ -66,18 +105,31 @@ class GridSearch:
         self.metric = 'RMSE'
         self.use_val_slipt_for_prev = use_val_slipt_for_prev
         self.save_grid_history = save_grid_history
+        # Via paralela aditiva (ver resolve_lag_size_pct): quando != None, um
+        # int que sobrepoe o lag_size resolvido de config.BASE_INFORMATION,
+        # tanto na busca do grid quanto no refit final. None => comportamento
+        # byte-a-byte identico ao de sempre (resolve via config).
+        self.lag_size_override = lag_size_override
         self.fold, self.title = generics.format_names(
             experiment_id,
             base_name,
             f'{experiment_params["horizon"]}{model_name}'
         )
 
+    def _resolve_lag_size(self):
+        """lag_size efetivo desta rodada: o override explícito (via paralela
+        de resolve_lag_size_pct) quando presente, senão o valor resolvido de
+        config.BASE_INFORMATION exatamente como sempre."""
+        if self.lag_size_override is not None:
+            return self.lag_size_override
+        return resolve_lag_size(config.BASE_INFORMATION[self.base_name])
+
     def _search_params(self):
 
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
         experiment_params['val_size'] = config.VAL_SIZE
-        experiment_params['lag_size'] = resolve_lag_size(config.BASE_INFORMATION[self.base_name])
+        experiment_params['lag_size'] = self._resolve_lag_size()
 
         target_list_mean_metrics = []
         grid_search_history = []
@@ -149,7 +201,7 @@ class GridSearch:
 
         experiment_params = self.experiment_params.copy()
         experiment_params['test_size'] = config.TEST_SIZE
-        experiment_params['lag_size'] = resolve_lag_size(config.BASE_INFORMATION[self.base_name])
+        experiment_params['lag_size'] = self._resolve_lag_size()
 
         if self.use_val_slipt_for_prev:
             experiment_params['val_size'] = config.VAL_SIZE

@@ -84,11 +84,24 @@ Desde 2026-07-02, `notebook/single_models/mlp_exec.ipynb` usa `experiment_params
 
 **Nota de proveniência (Tarefa 3.9, 2026-07-21):** o `.pkl` de `1mlp` (`data/result/chamados/*_1mlp.pkl`) ainda estava com `diff_kpss=True` persistido — foi gerado ANTES do commit `43dae50` (2026-07-02) que introduziu essa mudança em `mlp_exec.ipynb`, e nunca tinha sido regenerado (`*.pkl` é gitignored, notebook roda com `force=False`). Identificado como divergência real entre o artefato persistido e o código-fonte atual, análoga à corrigida na Seção 3.6 abaixo — mas fora do escopo da Tarefa 3.9, que tratou só do baseline MLP híbrido (`1amv1`).
 
-**Nota de proveniência (Tarefa 5.1, 2026-07-21):** a versão `diff_kpss=True` foi arquivada em `data/result/chamados_baseline_mlp_diffkpss_true_archive_20260721/` e `mlp_exec.ipynb` foi preparado (`force=True`, 17 séries explícitas) para regenerar `1mlp` com `diff_kpss=False`. **Execução manual (Run All) ainda pendente do pesquisador** — este documento será atualizado novamente quando a regeneração for confirmada. Até lá, `data/result/chamados/*_1mlp.pkl` continua com `diff_kpss=True`.
+**Nota de proveniência (Tarefa 5.1/5.2, 2026-07-21):** a versão `diff_kpss=True` foi arquivada em `data/result/chamados_baseline_mlp_diffkpss_true_archive_20260721/` e `mlp_exec.ipynb` foi preparado (`force=True`, 17 séries explícitas) para regenerar `1mlp` com `diff_kpss=False`. **Regeneração executada e confirmada** — `data/result/chamados/*_1mlp.pkl` tem `diff_kpss=False` desde então. Validação estrutural completa (contaminação, hiperparâmetros, ausência de "ATENÇÃO") documentada no Portão de validação MLP single — ver PLANO_ARQUITETURA.md Seção 1.9.
 
 ### 3.6 `activation='logistic'` no baseline MLP híbrido (`arima_mlp.ipynb`) — Configuração Intencional e Atual
 
 Desde 2026-07-02 (commit `43dae5076efb2fb8b859ad796ec7d0f143047ece`), `notebook/residual_hydridsystem/arima_mlp.ipynb` usa `MLPRegressor(activation='logistic', solver='lbfgs')` — mudança intencional e aprovada, preservando a capacidade da MLP de capturar não-linearidade no resíduo do ARIMA (premissa central do sistema híbrido; `activation='identity'`, usado antes dessa mudança, tornava a camada oculta puramente linear). O `.pkl` do baseline (`data/result/chamados/*_1amv1.pkl`) foi regenerado em 2026-07-21 (Tarefa 3.9) para eliminar uma divergência em que o artefato persistido (gerado antes do commit acima) ainda refletia `activation='identity'`. Este é o comportamento correto atual — **não é uma divergência a corrigir** em sessões futuras. A versão `identity` anterior foi arquivada em `data/result/chamados_baseline_identity_archive_20260721/` (não usar como baseline oficial — ver `README.md` naquela pasta).
+
+### 3.7 Escopo de `MLP`/`SVR` single com FS — análise faseada, não exclusão
+
+MLP e SVR single com Feature Selection fazem parte do escopo geral do projeto, com resultados já gerados e validados (Tarefas 5/6/6-gate). A ANÁLISE e DISCUSSÃO desses resultados nas tabelas comparativas ainda não foi realizada — isso está planejado para a fase de montagem das tabelas de benchmark completo, junto com ARIMA-MLP/ARIMA-SVR. A tabela consolidada entregue ao orientador nesta fase (`results/tabela_consolidada_orientador.md`) reflete o estado atual da análise, não uma exclusão definitiva de escopo.
+
+### 3.8 Correção do config de `taylor.txt` (`MS`/`m=12`/`auto` → `30min`/`m=48`/`336`) — 2026-08-28
+
+`taylor.txt` (demanda elétrica **semi-horária** de Taylor 2003, N=4032) tinha em `BASE_INFORMATION` (`src/config.py`) uma entrada com `freq='MS'`, `m=12`, `lag_size='auto'` — placeholders incorretos para dado semi-horário, nunca revistos. Corrigida, por decisão do pesquisador, para `{"freq": "30min", 'm': 48, 'lag_size': 336}`:
+- `freq='30min'` = granularidade real;
+- `m=48` = ciclo intra-diário (o ciclo semanal de 336 **não** entra no ARIMA — `auto_arima` com `m>=336` é inviável — fica coberto pela janela profunda de lags);
+- `lag_size=336` **fixo** (não `'auto'`): `get_max_lag_to_consider` satura em 20, o que cegaria os ciclos de 48 e 336. Exceder o teto aqui é intencional.
+
+**Nota de proveniência:** os 5 `.pkl` de baseline de `taylor` (`taylor_{1arima,1mlp,1svr,1amv1,1as}.pkl`), gerados sob o config antigo (rodada ampla de 17 séries), foram **arquivados** em `data/result/chamados_taylor_wrongconfig_archive_20260828/` (hashes em `data/result/chamados_taylor_pkl_hashes_pre_config_fix_20260828.txt`) — modelo linear mal-especificado (`m=12` numa série de período 48/336) + janela rasa. **Não reintroduzir nem usar em comparações.** As 5 entradas `taylor_*` foram removidas de `data/result/chamados_baseline_reference_hashes.json` (taylor sai da referência protegida até ser regenerado sob o config correto). `taylor` fica **fora da primeira leva de execução `'auto'`** (estruturalmente mais pesada: N=4032 × janela de 336) — terá rodada dedicada, precedida do pré-check de custo real de `rfecv` com `lag_size=336`.
 
 ---
 

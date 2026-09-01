@@ -1,6 +1,6 @@
 # Auditoria de Integridade Metodologica -- v1
 
-**Total de checagens: 494** -- ✅ 486 PASS, ❌ 0 FAIL, ⚠️ 0 ATENÇÃO, ➖ 8 N/A
+**Total de checagens: 489** -- ✅ 481 PASS, ❌ 0 FAIL, ⚠️ 0 ATENÇÃO, ➖ 8 N/A
 
 **Nenhuma divergência encontrada.**
 
@@ -481,11 +481,6 @@
 | baseline/sunspot_1as.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
 | baseline/sunspot_1mlp.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
 | baseline/sunspot_1svr.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
-| baseline/taylor_1amv1.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
-| baseline/taylor_1arima.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
-| baseline/taylor_1as.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
-| baseline/taylor_1mlp.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
-| baseline/taylor_1svr.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
 | baseline/temperature_1amv1.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
 | baseline/temperature_1arima.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |
 | baseline/temperature_1as.pkl | baseline_hash | ✅ PASS | hash confere com a referencia |

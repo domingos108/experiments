@@ -241,6 +241,15 @@ Detalhada na Seção 5 do [PLANO_ARQUITETURA.md](PLANO_ARQUITETURA.md#5-convenç
 
 `arima_mlp.ipynb`/`arima_svr.ipynb`/`mlp_exec.ipynb`/`svr_exec.ipynb` (sem sufixo) **nunca** recebem essas mudanças — são os baselines intocáveis da Seção 3 do CLAUDE.md.
 
+**Notebooks one-off de baseline para séries recém-adicionadas (2026-08-28) — NÃO protegidos, escopo restrito a 2 séries:**
+
+| Notebook | Papel | Status | `experiment_id` |
+|---|---|---|---|
+| `notebook/single_models/mlp_baseline_new_series.ipynb` | Gera `1mlp` **só** de `windspeedfortaleza`/`samurec` (`force=False`, `model_exec=10`, config idêntica ao baseline de 17 séries). Réplica isolada — não importa nem referencia `mlp_exec.ipynb`. | **Pronto, NÃO executado** | `chamados` |
+| `notebook/residual_hydridsystem/arima_mlp_baseline_new_series.ipynb` | Gera `1amv1` **só** de `windspeedfortaleza`/`samurec` (`Additive`, `force=False`). Guarda pré-flight exige `chamados/<série>_1arima.pkl` já gerado (rodar `arima_exec.ipynb` antes). Réplica isolada de `arima_mlp.ipynb`. | **Pronto, NÃO executado** | `chamados` |
+
+Estes 2 existem porque `mlp_exec.ipynb`/`arima_mlp.ipynb` são protegidos + estão com `force=True`/lista fixa de 17 séries (resquício das Tarefas 3.9/5.1) — rodá-los com escopo alterado regeneraria os 17 baselines já validados. Cada um tem uma célula de verificação pós-execução que confirma, por hash, que **nenhum** `.pkl` pré-existente em `chamados/` foi tocado. **Não confundir com os protegidos numa sessão futura** — o sufixo `_baseline_new_series` marca a diferença.
+
 ### 6b. `MLP` single (Tarefa 5) — primeira família fora de `Additive`
 
 Os 5 notebooks `notebook/single_models/mlp_<estrategia>.ipynb` seguem o mesmo padrão de 6 células dos notebooks de `ARIMA-MLP` (config única, sanity-check, execução via `GridSearch(...).execution()` direto por série, CSV de métricas, CSV de features) — **exceto** a célula de "copiar o ARIMA pré-treinado", que não existe aqui: `SKlearnModel` opera direto sobre a série bruta, sem depender de nenhum modelo linear.

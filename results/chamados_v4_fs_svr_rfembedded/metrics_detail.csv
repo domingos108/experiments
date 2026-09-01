@@ -2,4 +2,6 @@ ExperimentID,Serie,Modelo,Repeticao,ValMetric,MSE,RMSE,MAE,MAPE,theil,ARV,IA,POC
 chamados_v4_fs_svr_rfembedded,airlines,1svrrfembedded,0,14.469880,487.318681,22.075296,17.064763,3.766437,0.140962,0.076976,0.979615,78.571429
 chamados_v4_fs_svr_rfembedded,austres,1svrrfembedded,0,17.546347,193.564723,13.912754,10.314447,0.058814,0.081070,0.018572,0.995194,87.500000
 chamados_v4_fs_svr_rfembedded,coloradoRiver,1svrrfembedded,0,0.656430,0.021224,0.145685,0.114319,14.343390,0.736569,0.581317,0.859816,60.810811
+chamados_v4_fs_svr_rfembedded,samurec,1svrrfembedded,0,8.156590,58.600700,7.655109,6.149183,21.706958,6.749716,3.246334,0.459346,29.661017
 chamados_v4_fs_svr_rfembedded,sunspot,1svrrfembedded,0,35.110798,746.033897,27.313621,21.556217,51.851112,1.462324,0.591202,0.876582,71.428571
+chamados_v4_fs_svr_rfembedded,windspeedfortaleza,1svrrfembedded,0,0.349498,0.180152,0.424444,0.370860,13.888972,1.557557,0.532324,0.890827,50.000000

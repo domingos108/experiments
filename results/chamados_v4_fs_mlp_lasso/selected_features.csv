@@ -2,4 +2,6 @@ ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_
 chamados_v4_fs_mlp_lasso,airlines,1mlplasso,lasso,14.000000,0.000000,10,20
 chamados_v4_fs_mlp_lasso,austres,1mlplasso,lasso,1.000000,0.000000,10,1
 chamados_v4_fs_mlp_lasso,coloradoRiver,1mlplasso,lasso,7.000000,0.000000,10,16
+chamados_v4_fs_mlp_lasso,samurec,1mlplasso,lasso,7.000000,0.000000,10,15
 chamados_v4_fs_mlp_lasso,sunspot,1mlplasso,lasso,6.000000,0.000000,10,9
+chamados_v4_fs_mlp_lasso,windspeedfortaleza,1mlplasso,lasso,8.000000,0.000000,10,20
