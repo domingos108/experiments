@@ -5,7 +5,7 @@ chat, sem depender do histórico de conversa. Deve ser mantido atualizado a cada
 concluída (ou pausada) — é o complemento "estado atual" ao lado de CLAUDE.md (regras) e
 PLANO_ARQUITETURA.md (arquitetura/roadmap).
 
-**Última atualização:** 2026-08-28 — diversificação de séries + janela heurística de percentual. (1) 3 séries novas em `config.py`/`BASE_INFORMATION`: `samurec.txt` (bruta, confirmada — `data/raw/samu/format_samu.ipynb` cell 15), `windspeedfortaleza.txt` (já existia), `taylor.txt` corrigida (`MS`/12/`auto` → `30min`/48/336; ver CLAUDE.md 3.8, baselines antigos arquivados em `chamados_taylor_wrongconfig_archive_20260828/`, removidos da referência de hash). (2) Mecanismo `resolve_lag_size_pct()` + `GridSearch(lag_size_override=...)` em `grid_search_exp.py` — via paralela aditiva à janela `'auto'`/PACF, TDD (24 testes), `resolve_lag_size()` original intocada, 214 passed. (3) PENDENTE: matriz `'auto'` das 6 séries (sem `taylor`); rodada dedicada de `taylor` com pré-check de custo de `rfecv@336`; notebooks pct10 (Parte B, adiada). Estado anterior: 2026-07-22, Tarefa 7.2 — auditoria de integridade da matriz 5×5 (486 PASS, 0 FAIL, 0 ATENÇÃO).
+**Última atualização:** 2026-09-02 — correção do drift estocástico da matriz de FS MLP + seed reproduzível. (1) **Causa raiz:** `GridSearch(...).execution()` (laço direto dos notebooks de FS) nunca honrava `force`/`file_exists` — só `grid_seach_multiple_bases` fazia. Adicionar uma série a `fs_series_list` e re-rodar re-executava TODAS as séries; as 10 esteiras MLP (`arima_mlp/*` + `mlp/*`, `model_exec=10` sem seed) re-sortearam pesos e o `airlines`/f_test foi de 19.11 → 22.78 no commit `3329b98`. (2) **Correções (`grid_search_exp.py`, aditivas, TDD):** `execution()` honra `force`/`file_exists` (não-vazio); `estimator_random_state_base` (seed opt-in `= MLP_RANDOM_STATE_BASE = 42`, só no estimador, nunca no seletor — `f_test`/`lasso` viram bit-reproduzíveis, `mutual_info`/`rf_embedded`/`rfecv` fixam a MLP-init mas mantêm variância do seletor por PLANO §1.5); threaded por `grid_seach_multiple_bases`. Nota de proveniência em CLAUDE.md §3.4. (3) **Re-execução:** 10 esteiras MLP × 6 séries com seed=42 (`arima_mlp_*` + `mlp_*` notebooks agora passam o parâmetro). `airlines`/f_test: 22.78 → 19.116, drift eliminado, reprodutibilidade confirmada. SVR intocado (determinístico). (4) **Auditoria:** `FS_DEV_SERIES` 4→6 em `audit_experiment_integrity.py`/`build_benchmark_master.py`; 10 baselines novos pinados na referência de hash (à mão — ver pendência 7). Resultado: **689 checagens, 677 PASS, 0 FAIL, 0 ATENÇÃO**. 5 baselines originais das 17 séries intactos. (5) Artefatos regenerados: 20 `metrics.csv` + `benchmark_master_with_sources_v1.csv` + `tabela_consolidada_orientador.md` (mantida em 4 séries) + 4 `*_comparison.csv`. `pytest`: ~237 passed. **PENDENTE:** Parte 3.5 (seed nos baselines protegidos, pendência 8), depois Parte B (pct10). Estado anterior: 2026-08-28 — diversificação de séries + `resolve_lag_size_pct()`.
 **Branch/estado do Git no momento desta pausa:** `joao_lucas_experiments`. Working tree com
 mudanças das Tarefas 3.1 a 3.4 **não commitadas** (ver Seções 2, 2b e 2c) — o commit `98eccef`
 ("Runbook and checkpoints added") já continha o estado da Tarefa 3 completo; tudo abaixo dele
@@ -242,6 +242,19 @@ vs. k" com barras de erro. Nenhum experimento real (`chamados_v4_fs_*`) foi re-e
    deixa o `.pkl` do ARIMA da série nova sem copiar — `GridSearch`/`Additive` levanta
    `FileNotFoundError` sem tratamento no meio do laço. Mitigado hoje só por documentação
    (RUNBOOK.md Seção 8b recomenda sempre "Run All"), não por trava de código.
+7. **`audit_experiment_integrity.py --write-baseline-reference` APAGA o campo `note` do
+   `chamados_baseline_reference_hashes.json`** (`out = {"generated_at": ..., "files": ...}`,
+   sem `note`). Esse `note` carrega histórico crítico (remoção do taylor 2026-08-28, entradas
+   provisórias de seed 2026-09-02, aviso "regenerar SOMENTE após..."). **Até o script ser
+   corrigido para fazer merge do `note`, toda atualização da referência precisa ser feita à
+   mão** (ler o JSON, adicionar/remover entradas de `files`, editar `note`, reescrever) — como
+   foi feito nas Tarefas de taylor e de seed. Não rodar `--write-baseline-reference` cru.
+8. **Seed nos baselines protegidos — Parte 3.5, pendente.** `estimator_random_state_base=42`
+   está nos 10 notebooks de FS de MLP e a matriz de FS foi re-executada com ele (2026-09-02),
+   mas `mlp_exec.ipynb`/`arima_mlp.ipynb` (17 séries) ainda rodam sem seed. As 10 entradas de
+   hash de `samurec`/`windspeedfortaleza` em `chamados_baseline_reference_hashes.json`
+   (`_1mlp`/`_1amv1`) estão marcadas como **provisórias** — a Parte 3.5 vai re-gerar e re-pinar
+   todos os `*_1mlp`/`*_1amv1` com seed. Só depois disso a Parte B (pct10).
 
 ---
 

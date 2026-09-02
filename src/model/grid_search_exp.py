@@ -1,3 +1,4 @@
+import os
 import warnings
 from pathlib import Path
 
@@ -18,6 +19,13 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 def is_not_sklearn(model):
     # returns True if it is NOT a scikit-learn class/instance
     return not isinstance(model, BaseEstimator)
+
+
+# Seed base das familias MLP (arima_mlp/*, mlp/*) -- constante do projeto,
+# NAO um knob por notebook (CLAUDE.md Secao 3.4). Os notebooks de FS de MLP
+# passam `estimator_random_state_base=grid_search_exp.MLP_RANDOM_STATE_BASE`.
+# SVR e deterministico e nao usa.
+MLP_RANDOM_STATE_BASE = 42
 
 
 def resolve_lag_size(base_info):
@@ -88,7 +96,8 @@ class GridSearch:
                  model_exec = 10,
                  use_val_slipt_for_prev = False,
                  save_grid_history = True,
-                 lag_size_override = None
+                 lag_size_override = None,
+                 estimator_random_state_base = None
 
         ):
         self.model_class_exp = model_class_exp
@@ -110,11 +119,58 @@ class GridSearch:
         # tanto na busca do grid quanto no refit final. None => comportamento
         # byte-a-byte identico ao de sempre (resolve via config).
         self.lag_size_override = lag_size_override
+        # Seed opt-in (CLAUDE.md Secao 3.4): quando != None (ex. 42), a
+        # i-esima das model_exec repeticoes recebe random_state = base + i no
+        # ESTIMADOR (nunca no seletor). None => estocasticidade nao-reprodutivel
+        # de sempre. Ver _clone_model_for_rep.
+        self.estimator_random_state_base = estimator_random_state_base
+        if estimator_random_state_base is not None and is_not_sklearn(model):
+            raise ValueError(
+                "estimator_random_state_base so se aplica a model sklearn "
+                "(Pipeline/estimador nu). model_class nao-sklearn (LSTM/NHITS/"
+                "ELM/etc.) usa seu proprio 'random_seed' -- nao passe este parametro."
+            )
         self.fold, self.title = generics.format_names(
             experiment_id,
             base_name,
             f'{experiment_params["horizon"]}{model_name}'
         )
+
+    def _clone_model_for_rep(self, params, rep_index):
+        """Clona self.model, aplica os hiperparametros da combinacao e --
+        quando estimator_random_state_base != None -- injeta um random_state
+        deterministico (base + rep_index) no ESTIMADOR: 10 inicializacoes
+        distintas mas reproduziveis entre execucoes (CLAUDE.md Secao 3.4).
+
+        Pipeline([selector, estimator]) -> `estimator__random_state` (o step
+        DEVE se chamar 'estimator' -- convencao de toda a matriz de FS);
+        estimador nu (MLPRegressor via SKlearnModel/Additive) -> `random_state`.
+
+        Limitacoes conhecidas (achados de code-review): (1) so alcanca um nivel
+        de aninhamento -- um estimador composto/ensemble no step 'estimator'
+        teria seu RNG interno em `estimator__estimator__random_state`, nao
+        tocado (nao ocorre na matriz atual, so MLP/SVR simples); (2) SVR nao
+        tem `random_state` (determinístico) -> no-op. O seletor NAO e semeado
+        de proposito -- rf_embedded/rfecv/mutual_info mantem random_state=None
+        (PLANO_ARQUITETURA.md Secao 1.5). Se a seed esta setada mas NENHUMA
+        chave de random_state e encontrada num Pipeline, FALHA ALTO (nao
+        no-op silencioso) -- sinaliza step mal-nomeado."""
+        model_actual = clone(self.model).set_params(**params)
+        if self.estimator_random_state_base is not None:
+            seed = self.estimator_random_state_base + rep_index
+            available = model_actual.get_params()
+            if "estimator__random_state" in available:
+                model_actual.set_params(estimator__random_state=seed)
+            elif "random_state" in available:
+                model_actual.set_params(random_state=seed)
+            elif hasattr(model_actual, "named_steps"):
+                raise ValueError(
+                    "estimator_random_state_base setada, mas o Pipeline nao expoe "
+                    "'estimator__random_state' -- o step do estimador precisa se "
+                    f"chamar 'estimator'. get_params: {sorted(available)}"
+                )
+            # estimador nu sem random_state (SVR) -> no-op deliberado
+        return model_actual
 
     def _resolve_lag_size(self):
         """lag_size efetivo desta rodada: o override explícito (via paralela
@@ -149,12 +205,12 @@ class GridSearch:
             # dos hiperparametros do grid (achado de code-review, Tarefa 3.4).
             params_snapshot = dict(params)
 
-            for _ in range(0, model_exec):
+            for rep_index in range(0, model_exec):
                 if is_not_sklearn(self.model):
                     experiment_params['model_actual_config'] = params
                     model_actual = self.model
                 else:
-                    model_actual = clone(self.model).set_params(** params)
+                    model_actual = self._clone_model_for_rep(params, rep_index)
 
                 model_exp = self.model_class_exp(
                     model_actual,
@@ -197,6 +253,15 @@ class GridSearch:
 
     def execution(self):
 
+        # Idempotencia: mesma regra que grid_seach_multiple_bases ja aplicava,
+        # agora tambem no caminho direto GridSearch(...).execution() usado pelos
+        # notebooks de FS. Sem isto, force=False era no-op aqui e re-rodar um
+        # notebook (ex. ao adicionar 1 serie a fs_series_list) re-executava
+        # TODAS as series -- novo sorteio estocastico das ja validadas.
+        if not self.force and generics.file_exists(self.title) and os.path.getsize(self.title) > 0:
+            print(f"[skip] {self.title} ja existe e force=False -- pulando")
+            return
+
         best_exec_val, best_params, grid_search_history = self._search_params()
 
         experiment_params = self.experiment_params.copy()
@@ -210,13 +275,13 @@ class GridSearch:
 
         predict_results = []
         print(best_params)
-        for _ in range(0, self.model_exec): 
-            
+        for rep_index in range(0, self.model_exec):
+
             if is_not_sklearn(self.model):
                 experiment_params['model_actual_config'] = best_params
                 model_actual = self.model
             else:
-                model_actual = clone(self.model).set_params(** best_params)
+                model_actual = self._clone_model_for_rep(best_params, rep_index)
 
             model_exp_test = self.model_class_exp( 
                 model_actual,
@@ -252,18 +317,16 @@ def grid_seach_multiple_bases(fit_predict_class, model, normalize, model_paramet
                               model_exec, model_name, experiment_id,
                               force = True,
                               use_val_slipt_for_prev= True,
-                              save_grid_history = True
+                              save_grid_history = True,
+                              estimator_random_state_base = None
                               ):
 
     base_name_list = config.BASE_NAME_LIST
-    horizon = experiment_params['horizon']
     for base_name in base_name_list:
         print(base_name)
 
-        fold, title = generics.format_names(experiment_id, base_name, f'{horizon}{model_name}')
-        if generics.file_exists(title) and (not force):
-            continue
-
+        # O skip por force/file_exists vive agora em GridSearch.execution()
+        # (fonte unica) -- este wrapper so precisa construir e chamar.
         exec_gs = GridSearch(
             fit_predict_class,
             model,
@@ -276,7 +339,8 @@ def grid_seach_multiple_bases(fit_predict_class, model, normalize, model_paramet
             experiment_params,
             model_exec = model_exec,
             use_val_slipt_for_prev = use_val_slipt_for_prev,
-            save_grid_history = save_grid_history
+            save_grid_history = save_grid_history,
+            estimator_random_state_base = estimator_random_state_base
         )
 
         exec_gs.execution()

@@ -387,3 +387,24 @@ class TestRunAuditAgainstRealData:
     def test_gamma_provisional_note_is_present(self):
         finding = audit.check_gamma_provisional_note(audit.DEFAULT_PLANO_ARQUITETURA)
         assert finding.status == "PASS"
+
+
+class TestAuditScopeCoversSixSeries:
+    """A matriz de FS passou de 4 para 6 series (2026-08: windspeedfortaleza +
+    samurec anexadas). O escopo da auditoria tem que acompanhar, senao os
+    .pkl das 2 novas viram 'contaminacao' e o FAIL de naming curto-circuita
+    ~17 checagens profundas por experimento."""
+
+    def test_fs_dev_series_are_the_six(self):
+        assert audit.FS_DEV_SERIES == [
+            "airlines", "austres", "coloradoRiver", "sunspot",
+            "windspeedfortaleza", "samurec",
+        ]
+
+    def test_every_audited_series_has_an_expected_lag_size(self):
+        for series in audit.FS_DEV_SERIES:
+            assert series in audit.EXPECTED_LAG_SIZE, f"{series} sem lag_size de referencia"
+
+    def test_check_lag_size_knows_the_two_new_series(self):
+        assert audit.check_lag_size(20, "windspeedfortaleza").status == "PASS"
+        assert audit.check_lag_size(15, "samurec").status == "PASS"

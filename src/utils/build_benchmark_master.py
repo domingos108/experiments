@@ -68,7 +68,8 @@ TRIVIAL_SERIES = {"austres"}
 # expandindo o escopo da tabela em silencio. Duplicado (nao importado) de
 # tests/model/conftest.py -- mesmo precedente ja usado em
 # src/utils/audit_experiment_integrity.py.
-FS_DEV_SERIES = ["airlines", "austres", "coloradoRiver", "sunspot"]
+FS_DEV_SERIES = ["airlines", "austres", "coloradoRiver", "sunspot",
+                 "windspeedfortaleza", "samurec"]
 
 # Uma familia por linha da Secao 3 do CLAUDE.md (5 baselines protegidos) +
 # suas variantes de FS (Tarefas 4-8/PLANO_ARQUITETURA.md). `fs_dir_prefix`

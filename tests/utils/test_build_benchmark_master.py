@@ -344,3 +344,17 @@ class TestBuildMaster:
         ftest_row = next(r for r in rows if r["Metodo_FS"] == "ftest")
 
         assert ftest_row["RMSE_FS"] == pytest.approx(19.113854)  # nao 99.0
+
+
+class TestSeriesScopeIncludesDiversificationSeries:
+    def test_fs_dev_series_are_the_six(self):
+        assert FS_DEV_SERIES == [
+            "airlines", "austres", "coloradoRiver", "sunspot",
+            "windspeedfortaleza", "samurec",
+        ]
+
+    def test_the_two_new_series_are_not_flagged_trivial(self):
+        from utils.build_benchmark_master import TRIVIAL_SERIES
+
+        assert "windspeedfortaleza" not in TRIVIAL_SERIES
+        assert "samurec" not in TRIVIAL_SERIES

@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-07-22T02:10:08.032969",
-  "note": "Referencia de hash dos 5 baselines protegidos (CLAUDE.md Secao 3), gerada apos confirmacao de que activation='logistic' (1amv1, Tarefa 3.9) e diff_kpss=False (1mlp, Tarefa 5.1) estao corretos. Regenerar SOMENTE apos uma regeneracao legitima de baseline, documentada no CLAUDE.md/CHECKPOINTS.md -- nunca silenciosamente. | 2026-08-28: removidas as 5 entradas taylor_*.pkl -- a entrada de taylor.txt em BASE_INFORMATION foi corrigida (MS/m=12/auto -> 30min/m=48/336; ver CLAUDE.md Secao 3.8) e os baselines antigos, mal-especificados, foram arquivados em chamados_taylor_wrongconfig_archive_20260828/. taylor sai da referencia protegida ate ser regenerado sob o config correto.",
+  "note": "Referencia de hash dos 5 baselines protegidos (CLAUDE.md Secao 3), gerada apos confirmacao de que activation='logistic' (1amv1, Tarefa 3.9) e diff_kpss=False (1mlp, Tarefa 5.1) estao corretos. Regenerar SOMENTE apos uma regeneracao legitima de baseline, documentada no CLAUDE.md/CHECKPOINTS.md -- nunca silenciosamente. | 2026-08-28: removidas as 5 entradas taylor_*.pkl -- a entrada de taylor.txt em BASE_INFORMATION foi corrigida (MS/m=12/auto -> 30min/m=48/336; ver CLAUDE.md Secao 3.8) e os baselines antigos, mal-especificados, foram arquivados em chamados_taylor_wrongconfig_archive_20260828/. taylor sai da referencia protegida ate ser regenerado sob o config correto. | 2026-09-02: adicionadas as 10 entradas de samurec/windspeedfortaleza (baselines das 2 series de diversificacao, geradas 2026-08-29). ATENCAO: os _1mlp/_1amv1 dessas 2 series ainda NAO tem seed (Parte 3.5 do roadmap -- seed nos baselines protegidos -- vai re-gerar e re-pinar TODOS os 17*_1mlp/_1amv1 com estimator_random_state_base=42; ate la, estas 2 entradas de hash sao provisorias).",
   "files": {
     "airlines_1amv1.pkl": "271286753ef062ea6d609e18ffbabb5487f894386c00af1e4cd44c9ca22bf009",
     "airlines_1arima.pkl": "46af1fbb666d868c9e4d71d2cf263b1a89e58bbda5adff371b9d4d1d5d246c1e",
@@ -81,6 +81,16 @@
     "woolyrnq_1arima.pkl": "c09740efe2c0b0d2ca8026cfcbb9247a5a0638c31c77c76ca72c6c81587c6f3e",
     "woolyrnq_1as.pkl": "eb3256a8f60fa50e015b1a7af139feb93d65ad1fce76c92dd92c2110747480c1",
     "woolyrnq_1mlp.pkl": "bdba0bbe6d455dfc53e3e5f8e0f395318513fb731e50fa69ae5134fb0904d856",
-    "woolyrnq_1svr.pkl": "8b0e0f8c414b1bad5f0840850bebbbac2e5669c2683350c0ad20d398ecbd1155"
+    "woolyrnq_1svr.pkl": "8b0e0f8c414b1bad5f0840850bebbbac2e5669c2683350c0ad20d398ecbd1155",
+    "samurec_1arima.pkl": "4e9118cbd25aa99b7aae665dec38d1a214dea380e65d05b7ef74a0a47fa462d1",
+    "samurec_1mlp.pkl": "c4de3ec92d499bbe51814dad8940585693007db7b9d96c713a540a812719158b",
+    "samurec_1svr.pkl": "af8e25951065be6b598eec9a697cbcfe16800942e7c36a412379a0503396327c",
+    "samurec_1amv1.pkl": "a99c4f40ad45c1d350f8e8389063c2450bdcadadec031a69624b243c2f71d4a8",
+    "samurec_1as.pkl": "1fd48bedf40e8e5eb425abf29518ee6f2ed67c751e15a77a1a214890bacd6c1d",
+    "windspeedfortaleza_1arima.pkl": "8f1ccc045a87803ff50e0390701d2c0ad42b591b679459f823559eceeaf81c4b",
+    "windspeedfortaleza_1mlp.pkl": "f08b50120e7bd9e1fe1482f024a21b257eb5c5a65ea23e04b8c2c31009f6e32f",
+    "windspeedfortaleza_1svr.pkl": "3e3b212d00a3342a123bfdc6fb31e2d6ac85a8104cdd39b631fa57115c64a233",
+    "windspeedfortaleza_1amv1.pkl": "d91311bd5e6b168de6eb81fc0a98f6a227dfd8023d84a88e7fdc0b1a3b5e0cf6",
+    "windspeedfortaleza_1as.pkl": "07f4b36032866b9f5b055a5bc17fb91cf256b70253c0e9a547a61d0401534725"
   }
 }

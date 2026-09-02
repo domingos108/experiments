@@ -47,21 +47,25 @@ DEFAULT_BASELINE_DIR = Path(config.MODEL_DATA_PATH) / "chamados"
 DEFAULT_BASELINE_HASH_REFERENCE = Path(config.MODEL_DATA_PATH) / "chamados_baseline_reference_hashes.json"
 DEFAULT_PLANO_ARQUITETURA = ROOT / "PLANO_ARQUITETURA.md"
 
-# 4 series usadas em todos os experimentos de FS ate agora (Tarefa 1,
-# PLANO_ARQUITETURA.md Secao 3, item 1) -- duplicado aqui (nao importado de
-# tests/) porque src/ nao deve depender de tests/; cada notebook de FS ja
-# redefine essa mesma lista localmente, mesmo padrao.
-FS_DEV_SERIES = ["airlines", "austres", "coloradoRiver", "sunspot"]
+# Series da matriz de FS. 4 originais (Tarefa 1) + 2 de diversificacao
+# anexadas em 2026-08 (windspeedfortaleza, samurec -- CLAUDE.md Secao 3.8 /
+# CHECKPOINTS.md). Duplicado aqui (nao importado de tests/) porque src/ nao
+# deve depender de tests/; cada notebook de FS ja redefine essa mesma lista.
+FS_DEV_SERIES = ["airlines", "austres", "coloradoRiver", "sunspot",
+                 "windspeedfortaleza", "samurec"]
 
-# lag_size='auto' resolve para o MESMO valor nas 5 familias (confirmado com
-# dado real nas Tarefas 5/6/7 -- a serie/residuo em si nao depende do
-# estimador a jusante). Referencia unica; se alguma familia divergir disso,
-# a auditoria sinaliza.
+# lag_size='auto' resolve para o MESMO valor nas familias (confirmado com
+# dado real -- a serie/residuo em si nao depende do estimador a jusante).
+# Referencia unica; se alguma familia divergir disso, a auditoria sinaliza.
+# windspeedfortaleza=20 / samurec=15 medidos ao adicionar as series
+# (windspeedfortaleza passou de lag_size=12 fixo p/ 'auto' em 2026-08-28).
 EXPECTED_LAG_SIZE = {
     "airlines": 20,
     "austres": 1,
     "coloradoRiver": 16,
     "sunspot": 9,
+    "windspeedfortaleza": 20,
+    "samurec": 15,
 }
 
 METHODS = [
