@@ -86,6 +86,51 @@ class TestSKlearnModelAcceptsPipeline:
             )
 
 
+class TestSKlearnModelAcceptsPipelineWithLSTM:
+    """Spike LSTM (docs/spikes/spike_lstm_pipeline_and_hybrid.md), Parte A:
+    CustomLSTM (src/model/lstm.py) e um BaseEstimator/RegressorMixin real
+    (nao um wrapper 'model_class_exp' tipo NHITS/ELM/SCN) -- mesma premissa
+    agnostica de fit_predict_ml_schemma ja provada para MLPRegressor/SVR
+    deveria valer tambem aqui. epochs=2/hidden_layer_sizes=5 propositalmente
+    minusculos: o objetivo e confirmar que o pipeline RODA (mecanica de
+    forma/reshape 2D->3D dentro de CustomLSTM.fit), nao que o resultado seja
+    bom (RMSE aqui e visivelmente ruim, 2 epochs nao converge - irrelevante
+    para a pergunta de compatibilidade estrutural)."""
+
+    def test_pipeline_with_selector_runs_end_to_end_through_sklearn_model_lstm(self, tmp_path, monkeypatch):
+        from model.lstm import CustomLSTM
+
+        monkeypatch.setattr(config, "MODEL_DATA_PATH", str(tmp_path) + "/")
+
+        model = Pipeline([
+            ("selector", TimeSeriesFeatureSelector(strategy="f_test", k=3)),
+            ("estimator", CustomLSTM(hidden_layer_sizes=5, epochs=2)),
+        ])
+
+        exec_gs = grid_search_exp.GridSearch(
+            single_ml_model_exp.SKlearnModel,
+            model,
+            {"estimator__hidden_layer_sizes": [5]},
+            "fake_experiment_lstm",
+            "airlines.txt",
+            "testmodellstm",
+            force=True,
+            normalize=True,
+            experiment_params={"diff_kpss": False, "horizon": 1, "type_filter": None},
+            model_exec=1,
+            use_val_slipt_for_prev=True,
+        )
+        exec_gs.execution()
+
+        saved = generics.open_saved_result(exec_gs.title)
+        assert len(saved) == 1
+        fitted_model = saved[0]["experiment"].model
+        fitted_selector = fitted_model.named_steps["selector"]
+
+        assert 1 <= fitted_selector.selected_indices_.shape[0] <= fitted_selector.n_features_in_
+        assert saved[0]["experiment"].metrics_results["test_metrics"] != {}
+
+
 class TestSKlearnModelAcceptsPipelineWithSVR:
     """Tarefa 6: mesma premissa da Tarefa 5 (SKlearnModel e agnostico a
     identidade de `model`), agora com SVR no lugar de MLPRegressor -- a

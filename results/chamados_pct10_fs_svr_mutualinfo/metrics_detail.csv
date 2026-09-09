@@ -1,0 +1,7 @@
+ExperimentID,Serie,Modelo,Repeticao,ValMetric,MSE,RMSE,MAE,MAPE,theil,ARV,IA,POCID
+chamados_pct10_fs_svr_mutualinfo,airlines,1svrpct10mutualinfo,0,13.322712,499.585134,22.351401,18.818756,4.066011,0.176272,0.086637,0.978054,71.428571
+chamados_pct10_fs_svr_mutualinfo,austres,1svrpct10mutualinfo,0,16.223146,302.389893,17.389361,13.682829,0.078222,0.119312,0.028993,0.992474,87.500000
+chamados_pct10_fs_svr_mutualinfo,coloradoRiver,1svrpct10mutualinfo,0,0.642727,0.030151,0.173642,0.141637,17.352411,0.693683,0.758742,0.799197,56.756757
+chamados_pct10_fs_svr_mutualinfo,samurec,1svrpct10mutualinfo,0,8.384508,68.605992,8.282873,6.661193,23.402386,2.414456,2.627399,0.430863,37.288136
+chamados_pct10_fs_svr_mutualinfo,sunspot,1svrpct10mutualinfo,0,19.336202,423.621788,20.582074,16.900294,37.354346,0.415674,0.221572,0.943420,67.857143
+chamados_pct10_fs_svr_mutualinfo,windspeedfortaleza,1svrpct10mutualinfo,0,0.371988,0.140594,0.374959,0.306869,10.946241,0.731768,0.303257,0.927490,50.000000

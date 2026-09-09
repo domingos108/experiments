@@ -94,6 +94,26 @@ class TestSeedParamWiring:
         with pytest.raises(ValueError, match="random_state"):
             gs._clone_model_for_rep({"selector__k": 3}, 0)
 
+    def test_seed_with_customlstm_estimator_raises_no_random_state_param(self, tmp_path, monkeypatch):
+        """Spike LSTM (docs/spikes/spike_lstm_pipeline_and_hybrid.md): CustomLSTM
+        (src/model/lstm.py, BaseEstimator/RegressorMixin sobre Keras/TensorFlow)
+        so expoe 'hidden_layer_sizes'/'epochs' em __init__ -- NENHUM
+        'random_state' sklearn. Diferente do teste acima (step com nome
+        errado, 'mlp' em vez de 'estimator'), aqui o step SE CHAMA
+        'estimator' corretamente -- a falha e por o proprio estimador nao
+        ter random_state, nao por nomenclatura. is_not_sklearn(CustomLSTM)
+        e False (e um BaseEstimator de verdade), entao a guarda de
+        construcao (linha ~124 de grid_search_exp.py) NAO pega este caso --
+        so falha aqui, em _clone_model_for_rep, na primeira repeticao."""
+        from model.lstm import CustomLSTM
+
+        pipe = Pipeline([("selector", TimeSeriesFeatureSelector(strategy="f_test", k=3)),
+                         ("estimator", CustomLSTM(hidden_layer_sizes=5, epochs=2))])
+        gs = _gs(tmp_path, monkeypatch, pipe, {"selector__k": [3]}, "airlines.txt",
+                 estimator_random_state_base=42)
+        with pytest.raises(ValueError, match="random_state"):
+            gs._clone_model_for_rep({"selector__k": 3}, 0)
+
     def test_seed_with_non_sklearn_model_raises_at_construction(self, tmp_path, monkeypatch):
         """Achado de code-review: o ramo is_not_sklearn nunca consulta a seed.
         Passar estimator_random_state_base com um model_class nao-sklearn e um

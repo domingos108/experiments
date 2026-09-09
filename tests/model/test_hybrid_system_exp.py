@@ -143,6 +143,55 @@ def _copy_real_arima_pkl(tmp_path, dest_experiment_id, monkeypatch):
     )
 
 
+class TestAdditiveAcceptsPipelineWithLSTM:
+    """Spike LSTM (docs/spikes/spike_lstm_pipeline_and_hybrid.md), Parte B:
+    pergunta nao coberta pela investigacao anterior de CustomLSTM (que so
+    tinha sido testada como single-model) -- Additive.fit_predict tambem so
+    chama generics.fit_predict_model(self.model, ...)/fit_predict_ml_schemma,
+    mesma premissa agnostica ja provada para MLPRegressor/SVR dentro de
+    Additive. epochs=2 propositalmente minusculo (confirma mecanica de
+    encaixe -- reshape 2D->3D dentro de CustomLSTM.fit/predict operando
+    sobre o RESIDUO do ARIMA, e a recomposicao L_hat + N_hat funcionando --
+    nao qualidade de previsao)."""
+
+    def test_pipeline_with_selector_runs_end_to_end_through_additive_lstm(self, tmp_path, monkeypatch):
+        from model.lstm import CustomLSTM
+
+        _copy_real_arima_pkl(tmp_path, "fake_experiment_arimalstm", monkeypatch)
+
+        model = Pipeline([
+            ("selector", TimeSeriesFeatureSelector(strategy="f_test", k=3)),
+            ("estimator", CustomLSTM(hidden_layer_sizes=5, epochs=2)),
+        ])
+
+        exec_gs = grid_search_exp.GridSearch(
+            hybrid_system_exp.Additive,
+            model,
+            {"estimator__hidden_layer_sizes": [5]},
+            "fake_experiment_arimalstm",
+            "airlines.txt",
+            "testmodelarimalstm",
+            force=True,
+            normalize=True,
+            experiment_params={"linear_model_name": "1arima", "diff_kpss": False, "horizon": 1},
+            model_exec=1,
+            use_val_slipt_for_prev=True,
+        )
+        exec_gs.execution()
+
+        saved = generics.open_saved_result(exec_gs.title)
+        assert len(saved) == 1  # model_exec=1 nesta prova de mecanica -- LSTM real usaria model_exec>1 (estocastico)
+        fitted_model = saved[0]["experiment"].model
+        fitted_selector = fitted_model.named_steps["selector"]
+
+        assert 1 <= fitted_selector.selected_indices_.shape[0] <= fitted_selector.n_features_in_
+        # test_metrics nao-vazio confirma que a recomposicao L_hat (ARIMA) +
+        # N_hat (CustomLSTM sobre o residuo) rodou de ponta a ponta, incluindo
+        # a inversao de normalizacao/diferenciacao de y feita FORA do Pipeline
+        # (Additive.fit_predict/generics.format_forecats, PLANO_ARQUITETURA.md 1.4).
+        assert saved[0]["experiment"].metrics_results["test_metrics"] != {}
+
+
 class TestKhasheiBijariHybridAcceptsPipeline:
     """Spike Tarefa 15/16: KhasheiBijariHybrid.fit_predict() constroi a
     matriz combinada (residuo + previsao linear + serie) e so chama

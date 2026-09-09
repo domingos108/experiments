@@ -1,0 +1,56 @@
+{
+  "experiment_id": "chamados_pct10_fs_svr_ftest",
+  "notebook": "single_models/svr_pct10_ftest.ipynb",
+  "tipo": "fs pct10",
+  "familia": "SVR single (SKlearnModel) / f_test",
+  "janela": "pct10 -- resolve_lag_size_pct(N - int(config.TEST_SIZE*N), 0.10)",
+  "lag_pct_por_serie": {
+    "airlines.txt": 13,
+    "austres.txt": 8,
+    "coloradoRiver.txt": 67,
+    "sunspot.txt": 26,
+    "windspeedfortaleza.txt": 13,
+    "samurec.txt": 107
+  },
+  "series": [
+    "airlines.txt",
+    "austres.txt",
+    "coloradoRiver.txt",
+    "sunspot.txt",
+    "windspeedfortaleza.txt",
+    "samurec.txt"
+  ],
+  "model_exec": 1,
+  "seed": null,
+  "model_parameters": {
+    "selector__k": [
+      1,
+      5,
+      9,
+      15,
+      20
+    ],
+    "estimator__C": [
+      10,
+      100,
+      1000
+    ],
+    "estimator__gamma": [
+      "auto"
+    ],
+    "estimator__kernel": [
+      "rbf"
+    ],
+    "estimator__epsilon": [
+      0.1,
+      0.01,
+      0.001
+    ],
+    "estimator__tol": [
+      0.001
+    ]
+  },
+  "diff_kpss": true,
+  "baseline_pareado": "1svrpct10",
+  "strategy": "f_test"
+}
