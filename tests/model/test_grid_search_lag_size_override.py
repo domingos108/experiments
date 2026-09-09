@@ -8,11 +8,11 @@ Duas pecas, ambas estritamente aditivas (PLANO_ARQUITETURA.md Secao 1.3
 e o precedente de fs_lag_size):
 
 1. `resolve_lag_size_pct(n_obs, pct=0.10)` -- funcao IRMA de
-   `resolve_lag_size()`, nunca a chama nem altera. Recebe o N da serie
-   crua e devolve round(pct * N). Por decisao do pesquisador, `n_obs` e
-   o N COMPLETO -- que NAO e a base de get_max_lag_to_consider (essa
-   computa a PACF sobre ts_univariate[0:-test_size]); a diferenca de
-   base (~test_size/N) fica registrada como sub-resultado a discutir.
+   `resolve_lag_size()`, nunca a chama nem altera. Devolve round(pct *
+   n_obs). Decisao do pesquisador (2026-09-02): os notebooks pct10
+   passam `n_obs = N - test_size` (== N - int(config.TEST_SIZE * N)), a
+   MESMA base que get_max_lag_to_consider usa (PACF sobre
+   ts_univariate[0:-test_size]) -- isola exatamente "PACF vs. percentual".
 
 2. `GridSearch(..., lag_size_override=None)` -- parametro novo no fim da
    assinatura. Quando None (default), o comportamento e byte-a-byte
@@ -36,17 +36,17 @@ class TestResolveLagSizePct:
     @pytest.mark.parametrize(
         "n_obs, expected",
         [
-            # n_obs = N COMPLETO da serie (len de data/raw), nao N-test
-            (144, 14),    # airlines
-            (89, 9),      # austres
-            (744, 74),    # coloradoRiver
-            (288, 29),    # sunspot
-            (143, 14),    # windspeedfortaleza
-            (1188, 119),  # samurec
-            (4032, 403),  # taylor (!= 336 fixado por conhecimento de dominio)
+            # n_obs = N - test_size (N - int(0.1*N)) -- a base que os notebooks
+            # pct10 passam, paridade com get_max_lag_to_consider.
+            (130, 13),    # airlines       (N=144, test=14)
+            (81, 8),      # austres        (N=89,  test=8)
+            (670, 67),    # coloradoRiver  (N=744, test=74)
+            (260, 26),    # sunspot        (N=288, test=28)
+            (129, 13),    # windspeedfortaleza (N=143, test=14)
+            (1070, 107),  # samurec        (N=1188, test=118)
         ],
     )
-    def test_returns_ten_percent_of_full_n_rounded(self, n_obs, expected):
+    def test_returns_ten_percent_of_train_n_rounded(self, n_obs, expected):
         assert resolve_lag_size_pct(n_obs) == expected
 
     def test_pct_is_parametrizable_for_later_20pct_run(self):

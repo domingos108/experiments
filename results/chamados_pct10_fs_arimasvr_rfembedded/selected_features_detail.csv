@@ -1,0 +1,7 @@
+ExperimentID,Serie,Modelo,Repeticao,Strategy,N_Features_Selected,N_Features_Total,Selected_Indices,Selected_Lag_Names
+chamados_pct10_fs_arimasvr_rfembedded,airlines,1aspct10rfembedded,0,rf_embedded,4,13,1;6;7;11,lag_12;lag_7;lag_6;lag_2
+chamados_pct10_fs_arimasvr_rfembedded,austres,1aspct10rfembedded,0,rf_embedded,3,8,3;5;7,lag_5;lag_3;lag_1
+chamados_pct10_fs_arimasvr_rfembedded,coloradoRiver,1aspct10rfembedded,0,rf_embedded,17,67,6;7;8;18;19;20;21;30;31;32;43;44;48;54;55;56;66,lag_61;lag_60;lag_59;lag_49;lag_48;lag_47;lag_46;lag_37;lag_36;lag_35;lag_24;lag_23;lag_19;lag_13;lag_12;lag_11;lag_1
+chamados_pct10_fs_arimasvr_rfembedded,samurec,1aspct10rfembedded,0,rf_embedded,40,107,2;5;6;9;10;13;19;21;22;26;27;28;31;35;39;40;41;44;47;48;51;58;60;61;64;67;69;70;71;77;79;82;85;90;92;93;94;97;98;102,lag_105;lag_102;lag_101;lag_98;lag_97;lag_94;lag_88;lag_86;lag_85;lag_81;lag_80;lag_79;lag_76;lag_72;lag_68;lag_67;lag_66;lag_63;lag_60;lag_59;lag_56;lag_49;lag_47;lag_46;lag_43;lag_40;lag_38;lag_37;lag_36;lag_30;lag_28;lag_25;lag_22;lag_17;lag_15;lag_14;lag_13;lag_10;lag_9;lag_5
+chamados_pct10_fs_arimasvr_rfembedded,sunspot,1aspct10rfembedded,0,rf_embedded,9,26,0;1;14;15;17;19;22;24;25,lag_26;lag_25;lag_12;lag_11;lag_9;lag_7;lag_4;lag_2;lag_1
+chamados_pct10_fs_arimasvr_rfembedded,windspeedfortaleza,1aspct10rfembedded,0,rf_embedded,5,13,2;5;7;10;11,lag_11;lag_8;lag_6;lag_3;lag_2

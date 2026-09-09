@@ -1,0 +1,38 @@
+{
+  "experiment_id": "chamados_pct10_fs_rfembedded",
+  "notebook": "residual_hydridsystem/arima_mlp_pct10_rf_embedded.ipynb",
+  "tipo": "fs pct10",
+  "familia": "ARIMA-MLP hibrido (Additive) / rf_embedded",
+  "janela": "pct10 -- resolve_lag_size_pct(N - int(config.TEST_SIZE*N), 0.10)",
+  "lag_pct_por_serie": {
+    "airlines.txt": 13,
+    "austres.txt": 8,
+    "coloradoRiver.txt": 67,
+    "sunspot.txt": 26,
+    "windspeedfortaleza.txt": 13,
+    "samurec.txt": 107
+  },
+  "series": [
+    "airlines.txt",
+    "austres.txt",
+    "coloradoRiver.txt",
+    "sunspot.txt",
+    "windspeedfortaleza.txt",
+    "samurec.txt"
+  ],
+  "model_exec": 10,
+  "seed": 42,
+  "model_parameters": {
+    "estimator__hidden_layer_sizes": [
+      10,
+      20,
+      50
+    ],
+    "estimator__max_iter": [
+      1000
+    ]
+  },
+  "diff_kpss": false,
+  "baseline_pareado": "1amv1pct10",
+  "strategy": "rf_embedded"
+}

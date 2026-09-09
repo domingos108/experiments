@@ -1,0 +1,47 @@
+{
+  "experiment_id": "chamados_pct10",
+  "notebook": "residual_hydridsystem/arima_svr_pct10.ipynb",
+  "tipo": "baseline pct10",
+  "familia": "ARIMA-SVR hibrido (Additive)",
+  "janela": "pct10 -- resolve_lag_size_pct(N - int(config.TEST_SIZE*N), 0.10)",
+  "lag_pct_por_serie": {
+    "airlines.txt": 13,
+    "austres.txt": 8,
+    "coloradoRiver.txt": 67,
+    "sunspot.txt": 26,
+    "windspeedfortaleza.txt": 13,
+    "samurec.txt": 107
+  },
+  "series": [
+    "airlines.txt",
+    "austres.txt",
+    "coloradoRiver.txt",
+    "sunspot.txt",
+    "windspeedfortaleza.txt",
+    "samurec.txt"
+  ],
+  "model_exec": 1,
+  "seed": null,
+  "model_parameters": {
+    "C": [
+      10,
+      100,
+      1000
+    ],
+    "gamma": [
+      "auto"
+    ],
+    "kernel": [
+      "rbf"
+    ],
+    "epsilon": [
+      0.1,
+      0.01,
+      0.001
+    ],
+    "tol": [
+      0.001
+    ]
+  },
+  "diff_kpss": false
+}

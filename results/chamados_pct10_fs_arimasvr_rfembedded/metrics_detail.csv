@@ -1,0 +1,13 @@
+ExperimentID,Serie,Modelo,Repeticao,ValMetric,MSE,RMSE,MAE,MAPE,theil,ARV,IA,POCID
+chamados_pct10_fs_arimasvr_rfembedded,airlines,1arima,0,,389.194049,19.728002,15.102607,3.315326,0.134713,0.066301,0.983139,78.571429
+chamados_pct10_fs_arimasvr_rfembedded,airlines,1aspct10rfembedded,0,14.824762,428.075935,20.689996,16.369118,3.547375,0.137354,0.072395,0.981492,78.571429
+chamados_pct10_fs_arimasvr_rfembedded,austres,1arima,0,,358.130880,18.924346,13.710292,0.078380,0.129713,0.034904,0.990999,75.000000
+chamados_pct10_fs_arimasvr_rfembedded,austres,1aspct10rfembedded,0,15.633700,412.953974,20.321269,17.060564,0.097603,0.154777,0.041861,0.989396,75.000000
+chamados_pct10_fs_arimasvr_rfembedded,coloradoRiver,1arima,0,,0.104961,0.323976,0.262984,28.817193,0.755655,0.698832,0.667249,52.702703
+chamados_pct10_fs_arimasvr_rfembedded,coloradoRiver,1aspct10rfembedded,0,0.682692,0.135715,0.368395,0.279546,30.446847,0.624918,0.744668,0.616155,60.810811
+chamados_pct10_fs_arimasvr_rfembedded,samurec,1arima,0,,48.481589,6.962872,5.858474,20.580083,28.356862,34.562540,0.193628,64.406780
+chamados_pct10_fs_arimasvr_rfembedded,samurec,1aspct10rfembedded,0,7.513169,53.347870,7.303963,5.952970,20.279020,7.907717,8.174664,0.324986,58.474576
+chamados_pct10_fs_arimasvr_rfembedded,sunspot,1arima,0,,365.478709,19.117497,15.719171,36.503112,0.346894,0.193887,0.951367,67.857143
+chamados_pct10_fs_arimasvr_rfembedded,sunspot,1aspct10rfembedded,0,21.630954,338.082006,18.387006,14.953830,38.744592,0.287413,0.173586,0.955592,64.285714
+chamados_pct10_fs_arimasvr_rfembedded,windspeedfortaleza,1arima,0,,0.159223,0.399027,0.336684,11.585693,0.710406,0.282118,0.924855,57.142857
+chamados_pct10_fs_arimasvr_rfembedded,windspeedfortaleza,1aspct10rfembedded,0,0.381828,0.286549,0.535303,0.465139,15.466742,0.815471,0.389642,0.877583,50.000000

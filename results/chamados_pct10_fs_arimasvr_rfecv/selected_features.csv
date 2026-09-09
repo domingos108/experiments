@@ -1,0 +1,7 @@
+ExperimentID,Serie,Modelo,Strategy,N_Features_Selected_mean,N_Features_Selected_std,N_Repeticoes,N_Features_Total
+chamados_pct10_fs_arimasvr_rfecv,airlines,1aspct10rfecv,rfecv,12.000000,,1,13
+chamados_pct10_fs_arimasvr_rfecv,austres,1aspct10rfecv,rfecv,7.000000,,1,8
+chamados_pct10_fs_arimasvr_rfecv,coloradoRiver,1aspct10rfecv,rfecv,45.000000,,1,67
+chamados_pct10_fs_arimasvr_rfecv,samurec,1aspct10rfecv,rfecv,88.000000,,1,107
+chamados_pct10_fs_arimasvr_rfecv,sunspot,1aspct10rfecv,rfecv,18.000000,,1,26
+chamados_pct10_fs_arimasvr_rfecv,windspeedfortaleza,1aspct10rfecv,rfecv,8.000000,,1,13

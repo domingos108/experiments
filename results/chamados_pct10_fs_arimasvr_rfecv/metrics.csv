@@ -1,0 +1,13 @@
+ExperimentID,Serie,Modelo,N_Repeticoes,MSE_mean,MSE_std,RMSE_mean,RMSE_std,MAE_mean,MAE_std,MAPE_mean,MAPE_std,theil_mean,theil_std,ARV_mean,ARV_std,IA_mean,IA_std,POCID_mean,POCID_std
+chamados_pct10_fs_arimasvr_rfecv,airlines,1arima,1,389.194049,,19.728002,,15.102607,,3.315326,,0.134713,,0.066301,,0.983139,,78.571429,
+chamados_pct10_fs_arimasvr_rfecv,airlines,1aspct10rfecv,1,444.152942,,21.074936,,18.257246,,3.902291,,0.157941,,0.077026,,0.980536,,78.571429,
+chamados_pct10_fs_arimasvr_rfecv,austres,1arima,1,358.130880,,18.924346,,13.710292,,0.078380,,0.129713,,0.034904,,0.990999,,75.000000,
+chamados_pct10_fs_arimasvr_rfecv,austres,1aspct10rfecv,1,567.984695,,23.832429,,16.996673,,0.097270,,0.183812,,0.056740,,0.985495,,75.000000,
+chamados_pct10_fs_arimasvr_rfecv,coloradoRiver,1arima,1,0.104961,,0.323976,,0.262984,,28.817193,,0.755655,,0.698832,,0.667249,,52.702703,
+chamados_pct10_fs_arimasvr_rfecv,coloradoRiver,1aspct10rfecv,1,0.151145,,0.388774,,0.307193,,33.144447,,0.786363,,0.807519,,0.586569,,50.000000,
+chamados_pct10_fs_arimasvr_rfecv,samurec,1arima,1,48.481589,,6.962872,,5.858474,,20.580083,,28.356862,,34.562540,,0.193628,,64.406780,
+chamados_pct10_fs_arimasvr_rfecv,samurec,1aspct10rfecv,1,52.858049,,7.270354,,6.048188,,20.498476,,3.932152,,5.776597,,0.377423,,59.322034,
+chamados_pct10_fs_arimasvr_rfecv,sunspot,1arima,1,365.478709,,19.117497,,15.719171,,36.503112,,0.346894,,0.193887,,0.951367,,67.857143,
+chamados_pct10_fs_arimasvr_rfecv,sunspot,1aspct10rfecv,1,572.121813,,23.919068,,19.050548,,41.973149,,0.344543,,0.202075,,0.937137,,82.142857,
+chamados_pct10_fs_arimasvr_rfecv,windspeedfortaleza,1arima,1,0.159223,,0.399027,,0.336684,,11.585693,,0.710406,,0.282118,,0.924855,,57.142857,
+chamados_pct10_fs_arimasvr_rfecv,windspeedfortaleza,1aspct10rfecv,1,0.424715,,0.651702,,0.536943,,19.827099,,0.490619,,0.370833,,0.862816,,57.142857,

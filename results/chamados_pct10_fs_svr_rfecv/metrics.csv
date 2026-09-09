@@ -1,0 +1,7 @@
+ExperimentID,Serie,Modelo,N_Repeticoes,MSE_mean,MSE_std,RMSE_mean,RMSE_std,MAE_mean,MAE_std,MAPE_mean,MAPE_std,theil_mean,theil_std,ARV_mean,ARV_std,IA_mean,IA_std,POCID_mean,POCID_std
+chamados_pct10_fs_svr_rfecv,airlines,1svrpct10rfecv,1,489.033480,,22.114101,,17.164504,,3.786156,,0.141511,,0.077176,,0.979552,,78.571429,
+chamados_pct10_fs_svr_rfecv,austres,1svrpct10rfecv,1,327.029163,,18.083948,,14.333335,,0.081938,,0.116376,,0.032000,,0.991770,,87.500000,
+chamados_pct10_fs_svr_rfecv,coloradoRiver,1svrpct10rfecv,1,0.032200,,0.179444,,0.136651,,16.237492,,0.801721,,0.845135,,0.782950,,52.702703,
+chamados_pct10_fs_svr_rfecv,samurec,1svrpct10rfecv,1,62.894753,,7.930621,,6.526387,,23.234181,,2.302840,,1.963598,,0.528257,,43.220339,
+chamados_pct10_fs_svr_rfecv,sunspot,1svrpct10rfecv,1,384.955811,,19.620291,,15.189547,,32.971659,,0.645286,,0.285372,,0.939642,,75.000000,
+chamados_pct10_fs_svr_rfecv,windspeedfortaleza,1svrpct10rfecv,1,0.126313,,0.355406,,0.265582,,9.108327,,0.576440,,0.205604,,0.943917,,64.285714,

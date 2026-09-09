@@ -55,15 +55,12 @@ def resolve_lag_size_pct(n_obs, pct=0.10):
     config.BASE_INFORMATION). Motivacao: comparar a janela PACF ('auto')
     contra uma heuristica fixa, isolando exatamente essa variavel.
 
-    `n_obs`: por decisao do pesquisador (2026-08-28), o N da serie COMPLETA
-    (len de data/raw). ATENCAO -- isto NAO coincide com a base de calculo de
-    get_max_lag_to_consider: aquela funcao (input.py) computa a PACF sobre
-    ts_univariate[0:-test_size] (treino+val, exclui teste), entao o 'auto'
-    resolve a partir de N-test, nao de N total. A comparacao 'PACF vs.
-    percentual' portanto carrega essa diferenca de base (~test_size/N, i.e.
-    ~10%); se o pesquisador quiser paridade exata de base, passar
-    n_obs = N - test_size no notebook. Registrado como sub-resultado a
-    discutir (ver ambiguidade reportada na tarefa).
+    `n_obs`: decisao do pesquisador (2026-09-02) -- os notebooks pct10 passam
+    N - test_size (== len(data/raw) menos int(config.TEST_SIZE * N)), a MESMA
+    base que get_max_lag_to_consider usa internamente (PACF sobre
+    ts_univariate[0:-test_size]), para que a comparacao 'PACF vs. percentual'
+    isole exatamente o metodo, sem uma segunda diferenca de base escondida.
+    A funcao em si e agnostica: aplica round(pct * n_obs) sobre o que receber.
 
     Ao contrario de get_max_lag_to_consider, NAO ha teto (min(20, ...)) nem
     guarda de amostra pequena -- e proposital: o caso de uso motivador
