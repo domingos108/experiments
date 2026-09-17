@@ -353,7 +353,6 @@ def exec_ensemble(experiment_id, modelo_list, ens_type, ds_args={},  horizon=1):
         model_base = modelo_list[0]
 
     #predict_results ['index', 'prev', 'model_name', 'serie_name', 'real', 'exec']
-    
     for serie_name , df_serie in predict_results.groupby('serie_name'):
         exec_serie = []
         for exec_id, df_exec in df_serie.groupby('exec'):

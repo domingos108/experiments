@@ -36,14 +36,14 @@ BASE_NAME_LIST = [
     #'irradiancesp.txt',
 
     #'coloradoRiver.txt', 
-   # "lakeerie",
-    ##'sunspot.txt',
+    #"lakeerie",
+    #'sunspot.txt',
     #'milk.txt', 
     #'Unemployment.txt',
     #'ausbee.txt',
-    ##'austres.txt',
-    ##'heartrate.txt',
-    ##"ozon.txt",
+    #'austres.txt',
+    #'heartrate.txt',
+    #"ozon.txt",
     #"pollution.txt",
     #"redwine.txt",
     #"gasoline.txt",
@@ -69,8 +69,8 @@ BASE_NAME_LIST = [
     #'irradiancevalencapiaui.txt' 
 
     'windspeedcampinagrandehour.txt',
-    'windspeedcaruaruhour.txt',
-    'windspeedcastelodopiauihour.txt', 
+    #'windspeedcaruaruhour.txt',
+    #'windspeedcastelodopiauihour.txt', serie com problemas
     'windspeedmaceiohour.txt' ,
     'windspeedsalvadorhour.txt',
 
@@ -137,3 +137,4 @@ BASE_INFORMATION = {
     'consumosdformated.txt': {"freq": "MS", 'm': 12, 'lag_size': 12 },
     'consumosulformated.txt': {"freq": "MS", 'm': 12, 'lag_size': 12  }
 }
+

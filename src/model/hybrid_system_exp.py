@@ -645,7 +645,7 @@ class AdditiveValidFits:
         df_train = pd.DataFrame()
         df_val = pd.DataFrame()
         df_test = pd.DataFrame()
-
+        max_it_validfits = self.experiment_params['max_it_validfits']
         for i, c in enumerate(pn.error_series.columns):
             ts_actual = pn.error_series[c]
             df_windowed = input.create_windowing(
@@ -657,6 +657,12 @@ class AdditiveValidFits:
             if i == 0:  # only best arima
                 df_test = df_windowed.copy()
 
+            if  (max_it_validfits!=None) and (i>=max_it_validfits):
+                break
+
+        if (len(pn.error_series.columns) == max_it_validfits) and (max_it_validfits is not None):
+            print(f"Warning: The number of valid fits ({len(pn.error_series.columns)}) is equal to the maximum number of iterations ({max_it_validfits}).")
+        
         df_train = df_train.reset_index(drop=True)
         df_val = df_val.reset_index(drop=True)
         df_test = df_test.reset_index(drop=True)
@@ -674,9 +680,10 @@ class AdditiveValidFits:
         x_val = min_max_scaler_x.transform(df_val.drop(columns=['actual']))
 
         x_test = min_max_scaler_x.transform(df_test.drop(columns=['actual']))
+        
         (
-            train_predict,
-            val_predict,
+            _,
+            _,
             test_predict,
             time_exec,
         ) = generics.fit_predict_ml_schemma(self.model, x_train, y_train, x_val, x_test)
@@ -688,6 +695,7 @@ class AdditiveValidFits:
 
         test_predict = final_forecast[-test_size:]
         train_predict = final_forecast[0:-(test_size + val_size)]
+        
         if x_val.shape[0] > 0:
             val_predict = final_forecast[-(test_size + val_size):-test_size]
 

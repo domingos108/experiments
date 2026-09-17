@@ -1,3 +1,4 @@
+from ast import operator
 import logging
 import os
 import time
@@ -17,11 +18,7 @@ os.environ['PYTORCH_LIGHTNING_LOG_LEVEL'] = 'ERROR'
 logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 warnings.filterwarnings("ignore", message="`isinstance\\(treespec, LeafSpec\\)` is deprecated")
 
-
-# Força o PyTorch a usar todos os núcleos lógicos
 num_cores = os.cpu_count()
-torch.set_num_threads(num_cores)
-
 
 class NeuralForecastExp:
     """Wrapper for training and evaluating NeuralForecast models."""
@@ -118,7 +115,8 @@ class NeuralForecastExp:
         params['enable_progress_bar'] = False
         params['enable_model_summary'] = False
         params['default_root_dir'] = None
-
+        params['accelerator'] = 'cpu'
+        params['dataloader_kwargs'] ={"num_workers": num_cores}
         model_base = self.model(**params)
 
         ts_univariate = base_info.ts_univariate
@@ -199,4 +197,3 @@ class NeuralForecastExp:
                 'training': end_time_training - start_time_training,
             },
         }
-        
